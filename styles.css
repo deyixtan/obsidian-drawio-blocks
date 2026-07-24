@@ -1,62 +1,53 @@
-.drawio-blocks-preview-card {
+.markdown-rendered .drawio-blocks-preview-card,
+.markdown-preview-view .drawio-blocks-preview-card {
 	width: 100%;
 	margin: 0.75rem 0;
-	padding: 0 !important;
-	border: 0 !important;
-	border-radius: 0 !important;
-	background: transparent !important;
-	box-shadow: none !important;
+	padding: 0;
 	overflow: visible;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
 
-/* Obsidian and third-party themes commonly round the original fenced-code
- * <pre> element. Reset that host as well as the plugin-owned preview elements. */
 .markdown-rendered pre.drawio-blocks-codeblock-host,
-.markdown-preview-view pre.drawio-blocks-codeblock-host,
-pre.drawio-blocks-codeblock-host,
-.markdown-rendered pre:has(.drawio-blocks-preview-card),
-.markdown-preview-view pre:has(.drawio-blocks-preview-card),
-.drawio-blocks-codeblock-host {
-	padding: 0 !important;
-	border: 0 !important;
-	border-radius: 0 !important;
-	background: transparent !important;
-	box-shadow: none !important;
-	overflow: visible !important;
+.markdown-preview-view pre.drawio-blocks-codeblock-host {
+	padding: 0;
+	overflow: visible;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
 
-.drawio-blocks-image-wrap {
+.markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap,
+.markdown-preview-view .drawio-blocks-preview-card .drawio-blocks-image-wrap {
 	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 140px;
 	width: 100%;
-	overflow: auto;
-	border: 0 !important;
-	border-radius: 0 !important;
-	background: transparent !important;
-	box-shadow: none !important;
+	min-height: 140px;
+	overflow: visible;
 	cursor: pointer;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 	outline: none;
 }
 
-.markdown-rendered img.drawio-blocks-preview-image,
-.markdown-preview-view img.drawio-blocks-preview-image,
-img.drawio-blocks-preview-image,
-.drawio-blocks-preview-image {
+.markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image,
+.markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
 	display: block;
+	box-sizing: border-box;
 	max-width: 100%;
 	height: auto;
 	padding: 0.75rem;
-	box-sizing: border-box;
-	border: 0 !important;
-	border-radius: 0 !important;
-	background: transparent !important;
-	box-shadow: none !important;
-	clip-path: none !important;
-	-webkit-mask-image: none !important;
-	mask-image: none !important;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .drawio-blocks-preview-image.is-loading {
@@ -83,26 +74,39 @@ img.drawio-blocks-preview-image,
 	color: var(--text-error);
 }
 
-.drawio-blocks-edit-button {
+.drawio-blocks-image-wrap::after {
 	position: absolute;
-	top: 0.5rem;
-	right: 0.5rem;
+	bottom: 0.75rem;
+	left: 50%;
 	z-index: 2;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	padding: 0;
-	border-radius: 999px;
+
+	padding: 0.3rem 0.65rem;
+
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: 500;
+	white-space: nowrap;
+
+	content: 'Click to edit';
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+
 	opacity: 0;
+	pointer-events: none;
+	transform: translateX(-50%);
 	transition: opacity 120ms ease;
 }
 
-.drawio-blocks-image-wrap:hover .drawio-blocks-edit-button,
-.drawio-blocks-image-wrap:focus-within .drawio-blocks-edit-button,
-.is-mobile .drawio-blocks-edit-button {
-	opacity: 1;
+.drawio-blocks-image-wrap:hover::after,
+.drawio-blocks-image-wrap:focus-visible::after {
+	opacity: 0.9;
+}
+
+.drawio-blocks-image-wrap:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
 }
 
 .drawio-blocks-modal {
@@ -195,7 +199,7 @@ img.drawio-blocks-preview-image,
 	border: 0;
 }
 
-@media (max-width: 700px), (hover: none) {
+@media (max-width: 700px) {
 	.drawio-blocks-modal {
 		position: fixed;
 		inset: 0;
@@ -210,7 +214,15 @@ img.drawio-blocks-preview-image,
 		border-radius: 0;
 	}
 
-	.drawio-blocks-preview-image {
+	.markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image,
+	.markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
 		padding: 0.25rem;
+	}
+}
+
+@media (hover: none) {
+	.drawio-blocks-image-wrap::after {
+		content: 'Tap to edit';
+		opacity: 0.7;
 	}
 }

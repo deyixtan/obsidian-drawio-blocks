@@ -1,4 +1,3 @@
-import { setIcon } from 'obsidian';
 import type DrawioBlocksPlugin from '../main';
 import type { DrawioSource } from '../source/DrawioSource';
 
@@ -34,11 +33,6 @@ export function mountPreview(
 		cls: 'drawio-blocks-preview-image',
 		attr: { alt: source.title() },
 	});
-	const editButton = imageWrap.createEl('button', {
-		cls: 'drawio-blocks-edit-button',
-		attr: { 'aria-label': 'Edit diagram' },
-	});
-	setIcon(editButton, 'pencil');
 
 	const refresh = (): void => {
 		const current = ++generation;
@@ -64,11 +58,6 @@ export function mountPreview(
 	};
 
 	const openEditor = (): void => plugin.openEditor(source, refresh);
-	const onEditClick = (event: MouseEvent): void => {
-		event.preventDefault();
-		event.stopPropagation();
-		openEditor();
-	};
 	const onWrapClick = (): void => openEditor();
 	const onWrapKeydown = (event: KeyboardEvent): void => {
 		if (event.target !== imageWrap) return;
@@ -78,12 +67,12 @@ export function mountPreview(
 		}
 	};
 
-	editButton.addEventListener('click', onEditClick);
 	imageWrap.addEventListener('click', onWrapClick);
 	imageWrap.addEventListener('keydown', onWrapKeydown);
 	imageWrap.tabIndex = 0;
 	imageWrap.setAttribute('role', 'button');
 	imageWrap.setAttribute('aria-label', `Edit ${source.title()}`);
+	imageWrap.setAttribute('title', 'Edit draw.io diagram');
 
 	refresh();
 
@@ -92,7 +81,6 @@ export function mountPreview(
 		destroy: () => {
 			destroyed = true;
 			generation += 1;
-			editButton.removeEventListener('click', onEditClick);
 			imageWrap.removeEventListener('click', onWrapClick);
 			imageWrap.removeEventListener('keydown', onWrapKeydown);
 			image.removeAttribute('src');
