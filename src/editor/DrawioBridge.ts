@@ -4,7 +4,6 @@ import {
 	DRAWIO_EDITOR_URL,
 	DRAWIO_ORIGIN,
 	DRAWIO_RESTRICTED_URL_PARAMS,
-	DRAWIO_ROUGH_URL_PARAMS,
 } from '../constants';
 import type { DrawioSource } from '../source/DrawioSource';
 import { normalizeDrawioXml, validateDrawioXml } from '../utils/xml';
@@ -111,7 +110,6 @@ export class DrawioBridge {
 			saveAndExit: '0',
 			noExitBtn: '0',
 			dark: this.dark ? '1' : '0',
-			...DRAWIO_ROUGH_URL_PARAMS,
 			...(Platform.isMobileApp ? { touch: '1' } : {}),
 			...DRAWIO_RESTRICTED_URL_PARAMS,
 		});

@@ -2,7 +2,6 @@ import {
 	DRAWIO_EDITOR_URL,
 	DRAWIO_ORIGIN,
 	DRAWIO_RESTRICTED_URL_PARAMS,
-	DRAWIO_ROUGH_URL_PARAMS,
 	EMPTY_DRAWIO_XML,
 } from '../constants';
 
@@ -88,7 +87,6 @@ export class PreviewExporter {
 			dark: dark ? '1' : '0',
 			ui: 'min',
 			spin: '0',
-			...DRAWIO_ROUGH_URL_PARAMS,
 			...DRAWIO_RESTRICTED_URL_PARAMS,
 		});
 		this.iframe = this.container.createEl('iframe', {

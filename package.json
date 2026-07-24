@@ -1,6 +1,6 @@
 {
 	"name": "drawio-blocks",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Edit and render draw.io XML inline in fenced Markdown code blocks using the online diagrams.net editor.",
 	"main": "main.js",
 	"type": "module",

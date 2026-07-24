@@ -34,6 +34,8 @@ export function mountPreview(
 		attr: { alt: source.title() },
 	});
 
+	image.draggable = false;
+
 	const refresh = (): void => {
 		const current = ++generation;
 		status.setText('Rendering diagram…');
@@ -57,12 +59,28 @@ export function mountPreview(
 			});
 	};
 
-	const openEditor = (): void => plugin.openEditor(source, refresh);
-	const onWrapClick = (): void => openEditor();
+	const openEditor = (): void => {
+		imageWrap.blur();
+
+		window.setTimeout(() => {
+			if (!destroyed) {
+				plugin.openEditor(source, refresh);
+			}
+		}, 0);
+	};
+
+	const onWrapClick = (event: MouseEvent): void => {
+		event.preventDefault();
+		event.stopPropagation();
+		openEditor();
+	};
+
 	const onWrapKeydown = (event: KeyboardEvent): void => {
 		if (event.target !== imageWrap) return;
+
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
+			event.stopPropagation();
 			openEditor();
 		}
 	};
