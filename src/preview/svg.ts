@@ -67,9 +67,9 @@ export function sanitizeSvgDataUri(uri: string): string {
 		throw new Error('The generated SVG preview is invalid.');
 	}
 
-	doc
-		.querySelectorAll('script, iframe, object, embed, audio, video, link, base, meta')
-		.forEach((node) => node.remove());
+	doc.querySelectorAll('script, iframe, object, embed, audio, video, link, base, meta').forEach(
+		(node) => node.remove(),
+	);
 
 	doc.querySelectorAll('style').forEach((element) => {
 		if (hasUnsafeCss(element.textContent ?? '')) element.remove();

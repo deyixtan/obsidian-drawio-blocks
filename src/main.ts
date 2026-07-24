@@ -63,9 +63,7 @@ export default class DrawioBlocksPlugin extends Plugin {
 			},
 		});
 
-		this.registerEvent(
-			this.app.workspace.on('css-change', () => this.refreshAllPreviews()),
-		);
+		this.registerEvent(this.app.workspace.on('css-change', () => this.refreshAllPreviews()));
 	}
 
 	onunload(): void {

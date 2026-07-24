@@ -12,7 +12,12 @@
 		"format:check": "prettier . --check",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": ["obsidian", "drawio", "diagrams.net", "mobile"],
+	"keywords": [
+		"obsidian",
+		"drawio",
+		"diagrams.net",
+		"mobile"
+	],
 	"license": "MIT",
 	"prettier": {
 		"printWidth": 100,

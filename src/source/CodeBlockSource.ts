@@ -35,25 +35,19 @@ export class CodeBlockSource implements DrawioSource {
 		const lines = current.split(/\r?\n/);
 		const range = this.locateCurrentRange(lines);
 		const body = getDrawioBlockBody(lines, range);
-		if (body === null)
-			throw new Error('The draw.io code block could not be read.');
+		if (body === null) throw new Error('The draw.io code block could not be read.');
 		this.lastBody = body;
 		return body;
 	}
 
 	async write(xml: string): Promise<void> {
-		this.writeChain = this.writeChain
-			.catch(() => undefined)
-			.then(() => this.writeNow(xml));
+		this.writeChain = this.writeChain.catch(() => undefined).then(() => this.writeNow(xml));
 		return this.writeChain;
 	}
 
 	private getSourceFile(): TFile {
-		const file = this.app.vault.getAbstractFileByPath(
-			this.context.sourcePath,
-		);
-		if (!(file instanceof TFile))
-			throw new Error('The source Markdown note no longer exists.');
+		const file = this.app.vault.getAbstractFileByPath(this.context.sourcePath);
+		if (!(file instanceof TFile)) throw new Error('The source Markdown note no longer exists.');
 		return file;
 	}
 
@@ -97,8 +91,7 @@ export class CodeBlockSource implements DrawioSource {
 			return replaceDrawioBlockBody(current, range, formatted);
 		});
 
-		if (!replaced)
-			throw new Error('The draw.io code block could not be updated.');
+		if (!replaced) throw new Error('The draw.io code block could not be updated.');
 		this.lastBody = formatted;
 	}
 }

@@ -32,10 +32,7 @@ export class PreviewExporter {
 	private destroyed = false;
 
 	exportSvg(xml: string, dark: boolean): Promise<string> {
-		if (this.destroyed)
-			return Promise.reject(
-				new Error('Preview exporter is unavailable.'),
-			);
+		if (this.destroyed) return Promise.reject(new Error('Preview exporter is unavailable.'));
 		return new Promise((resolve, reject) => {
 			this.queue.push({ xml, dark, resolve, reject });
 			this.process();
@@ -70,10 +67,7 @@ export class PreviewExporter {
 			background: 'none',
 		});
 		this.timer = this.win.setTimeout(
-			() =>
-				this.failActive(
-					new Error('Timed out generating the draw.io preview.'),
-				),
+			() => this.failActive(new Error('Timed out generating the draw.io preview.')),
 			30000,
 		);
 	}
@@ -105,24 +99,17 @@ export class PreviewExporter {
 			},
 		});
 		this.iframe.addEventListener('error', () => {
-			this.failInitialization(
-				new Error('Could not load the diagrams.net preview renderer.'),
-			);
+			this.failInitialization(new Error('Could not load the diagrams.net preview renderer.'));
 		});
 		this.initTimer = this.win.setTimeout(
 			() =>
 				this.failInitialization(
-					new Error(
-						'Timed out loading the diagrams.net preview renderer.',
-					),
+					new Error('Timed out loading the diagrams.net preview renderer.'),
 				),
 			30000,
 		);
 		this.handler = (event) => {
-			if (
-				event.source !== this.iframe?.contentWindow ||
-				event.origin !== DRAWIO_ORIGIN
-			)
+			if (event.source !== this.iframe?.contentWindow || event.origin !== DRAWIO_ORIGIN)
 				return;
 			const message = this.parse(event.data);
 			if (!message) return;
@@ -145,21 +132,14 @@ export class PreviewExporter {
 					noExitBtn: 1,
 					dark: this.currentDark ? 1 : 0,
 				});
-				if (this.initTimer !== null)
-					this.win.clearTimeout(this.initTimer);
+				if (this.initTimer !== null) this.win.clearTimeout(this.initTimer);
 				this.initTimer = null;
 				this.ready = true;
 				this.win.setTimeout(() => this.process(), 0);
 			} else if (message.event === 'export') {
 				if (message.error) this.failActive(new Error(message.error));
-				else if (typeof message.data === 'string')
-					this.finishActive(message.data);
-				else
-					this.failActive(
-						new Error(
-							'diagrams.net returned an empty SVG preview.',
-						),
-					);
+				else if (typeof message.data === 'string') this.finishActive(message.data);
+				else this.failActive(new Error('diagrams.net returned an empty SVG preview.'));
 			} else if (message.error && !this.ready) {
 				this.failInitialization(new Error(message.error));
 			}
@@ -170,8 +150,7 @@ export class PreviewExporter {
 
 	private parse(data: unknown): DrawioMessage | null {
 		try {
-			const parsed: unknown =
-				typeof data === 'string' ? JSON.parse(data) : data;
+			const parsed: unknown = typeof data === 'string' ? JSON.parse(data) : data;
 			if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
 				return null;
 			}
@@ -182,10 +161,7 @@ export class PreviewExporter {
 	}
 
 	private post(message: object): void {
-		this.iframe?.contentWindow?.postMessage(
-			JSON.stringify(message),
-			DRAWIO_ORIGIN,
-		);
+		this.iframe?.contentWindow?.postMessage(JSON.stringify(message), DRAWIO_ORIGIN);
 	}
 
 	private finishActive(data: string): void {

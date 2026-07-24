@@ -32,9 +32,9 @@ After the plugin is accepted into the Obsidian Community Plugins directory:
 1. Build the plugin with `npm run build`, or download a release.
 2. Create this folder in your vault:
 
-   ```text
-   <vault>/.obsidian/plugins/obsidian-drawio-blocks/
-   ```
+    ```text
+    <vault>/.obsidian/plugins/obsidian-drawio-blocks/
+    ```
 
 3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder.
 4. Reload Obsidian and enable **draw.io Blocks** under **Settings → Community plugins**.

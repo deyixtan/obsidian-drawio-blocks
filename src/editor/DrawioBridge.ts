@@ -74,9 +74,7 @@ export class DrawioBridge {
 
 		iframe.addEventListener('error', () => {
 			this.reportError(
-				new Error(
-					'Could not load the diagrams.net editor. Check your network connection.',
-				),
+				new Error('Could not load the diagrams.net editor. Check your network connection.'),
 			);
 		});
 
@@ -122,8 +120,7 @@ export class DrawioBridge {
 
 	private parseMessage(data: unknown): DrawioEvent | null {
 		try {
-			const parsed: unknown =
-				typeof data === 'string' ? JSON.parse(data) : data;
+			const parsed: unknown = typeof data === 'string' ? JSON.parse(data) : data;
 			if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
 				return null;
 			}
@@ -134,10 +131,7 @@ export class DrawioBridge {
 	}
 
 	private post(message: object): void {
-		this.iframe?.contentWindow?.postMessage(
-			JSON.stringify(message),
-			DRAWIO_ORIGIN,
-		);
+		this.iframe?.contentWindow?.postMessage(JSON.stringify(message), DRAWIO_ORIGIN);
 	}
 
 	private async handleMessage(message: DrawioEvent): Promise<void> {
@@ -150,11 +144,8 @@ export class DrawioBridge {
 						suppressNewWindows: true,
 						settingsName: 'drawio-blocks',
 						override: false,
-						version:
-							this.options.settingsVersion ??
-							DEFAULT_EDITOR_SETTINGS_VERSION,
-						defaultLibraries:
-							'general;uml;er;bpmn;flowchart;basic;arrows2',
+						version: this.options.settingsVersion ?? DEFAULT_EDITOR_SETTINGS_VERSION,
+						defaultLibraries: 'general;uml;er;bpmn;flowchart;basic;arrows2',
 						enabledLibraries: null,
 						expandLibraries: true,
 						enableCustomLibraries: false,
@@ -178,8 +169,7 @@ export class DrawioBridge {
 				this.markReady();
 				break;
 			case 'autosave':
-				if (typeof message.xml === 'string')
-					this.queueSave(message.xml, false);
+				if (typeof message.xml === 'string') this.queueSave(message.xml, false);
 				break;
 			case 'save':
 				if (typeof message.xml === 'string') {
@@ -200,28 +190,20 @@ export class DrawioBridge {
 					if (this.exitSnapshotTimer !== null)
 						this.hostWindow.clearTimeout(this.exitSnapshotTimer);
 					this.exitSnapshotTimer = null;
-					if (this.saveTimer !== null)
-						this.hostWindow.clearTimeout(this.saveTimer);
+					if (this.saveTimer !== null) this.hostWindow.clearTimeout(this.saveTimer);
 					this.saveTimer = null;
 					this.pendingXml = message.xml;
 					await this.flushAndExit();
 				}
 				break;
 			case 'openLink':
-				if (typeof message.href === 'string')
-					this.openSafeLink(message.href);
+				if (typeof message.href === 'string') this.openSafeLink(message.href);
 				break;
 			default:
 				if (message.error) {
-					const error = new Error(
-						`diagrams.net reported: ${message.error}`,
-					);
+					const error = new Error(`diagrams.net reported: ${message.error}`);
 					if (!this.ready) this.reportError(error);
-					else
-						console.error(
-							'[drawio-blocks] diagrams.net error',
-							message.error,
-						);
+					else console.error('[drawio-blocks] diagrams.net error', message.error);
 				}
 				break;
 		}
@@ -230,16 +212,14 @@ export class DrawioBridge {
 	private markReady(): void {
 		if (this.ready) return;
 		this.ready = true;
-		if (this.initTimer !== null)
-			this.hostWindow.clearTimeout(this.initTimer);
+		if (this.initTimer !== null) this.hostWindow.clearTimeout(this.initTimer);
 		this.initTimer = null;
 		this.options.onReady?.();
 	}
 
 	private queueSave(xml: string, immediate: boolean): void {
 		this.pendingXml = xml;
-		if (this.saveTimer !== null)
-			this.hostWindow.clearTimeout(this.saveTimer);
+		if (this.saveTimer !== null) this.hostWindow.clearTimeout(this.saveTimer);
 		this.saveTimer = null;
 
 		if (immediate) {
@@ -300,8 +280,7 @@ export class DrawioBridge {
 			if (!this.exitSnapshotPending || this.destroyed) return;
 			this.exitSnapshotPending = false;
 			this.exitSnapshotTimer = null;
-			const message =
-				'Could not confirm the latest diagram state. The editor was kept open.';
+			const message = 'Could not confirm the latest diagram state. The editor was kept open.';
 			new Notice(`draw.io Blocks: ${message}`, 8000);
 			this.post({ action: 'status', message, modified: true });
 		}, EXIT_SNAPSHOT_TIMEOUT_MS);
@@ -326,11 +305,7 @@ export class DrawioBridge {
 		try {
 			const url = new URL(href);
 			if (!['https:', 'http:', 'mailto:'].includes(url.protocol)) return;
-			this.hostWindow.open(
-				url.toString(),
-				'_blank',
-				'noopener,noreferrer',
-			);
+			this.hostWindow.open(url.toString(), '_blank', 'noopener,noreferrer');
 		} catch {
 			// Ignore malformed or relative links from diagram content.
 		}
@@ -339,8 +314,7 @@ export class DrawioBridge {
 	private reportError(error: Error): void {
 		if (this.destroyed || this.errorReported) return;
 		this.errorReported = true;
-		if (this.initTimer !== null)
-			this.hostWindow.clearTimeout(this.initTimer);
+		if (this.initTimer !== null) this.hostWindow.clearTimeout(this.initTimer);
 		this.initTimer = null;
 		if (this.options.onError) this.options.onError(error);
 		else new Notice(`draw.io Blocks: ${error.message}`, 8000);
@@ -353,12 +327,9 @@ export class DrawioBridge {
 	destroy(): void {
 		if (this.destroyed) return;
 		this.destroyed = true;
-		if (this.saveTimer !== null)
-			this.hostWindow.clearTimeout(this.saveTimer);
-		if (this.initTimer !== null)
-			this.hostWindow.clearTimeout(this.initTimer);
-		if (this.exitSnapshotTimer !== null)
-			this.hostWindow.clearTimeout(this.exitSnapshotTimer);
+		if (this.saveTimer !== null) this.hostWindow.clearTimeout(this.saveTimer);
+		if (this.initTimer !== null) this.hostWindow.clearTimeout(this.initTimer);
+		if (this.exitSnapshotTimer !== null) this.hostWindow.clearTimeout(this.exitSnapshotTimer);
 		this.saveTimer = null;
 		this.initTimer = null;
 		this.exitSnapshotTimer = null;

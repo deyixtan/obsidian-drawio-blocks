@@ -6,10 +6,7 @@ export interface DrawioBlockRange {
 const OPEN_RE = /^\s*(`{3,}|~{3,})\s*drawio\s*$/i;
 const CLOSE_RE = /^\s*(`{3,}|~{3,})\s*$/;
 
-export function getDrawioBlockBody(
-	lines: string[],
-	range: DrawioBlockRange,
-): string | null {
+export function getDrawioBlockBody(lines: string[], range: DrawioBlockRange): string | null {
 	if (range.start < 0 || range.end <= range.start || range.end >= lines.length) {
 		return null;
 	}
@@ -24,13 +21,13 @@ export function getDrawioBlockBody(
 		return null;
 	}
 
-	return lines.slice(range.start + 1, range.end).join('\n').trim();
+	return lines
+		.slice(range.start + 1, range.end)
+		.join('\n')
+		.trim();
 }
 
-export function findDrawioBlocks(
-	lines: string[],
-	expectedBody: string,
-): DrawioBlockRange[] {
+export function findDrawioBlocks(lines: string[], expectedBody: string): DrawioBlockRange[] {
 	const wanted = expectedBody.trim();
 	const matches: DrawioBlockRange[] = [];
 
@@ -65,10 +62,6 @@ export function replaceDrawioBlockBody(
 	const newline = documentText.includes('\r\n') ? '\r\n' : '\n';
 	const lines = documentText.split(/\r?\n/);
 	const replacement = body.split('\n');
-	lines.splice(
-		range.start + 1,
-		Math.max(0, range.end - range.start - 1),
-		...replacement,
-	);
+	lines.splice(range.start + 1, Math.max(0, range.end - range.start - 1), ...replacement);
 	return lines.join(newline);
 }

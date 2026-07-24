@@ -66,9 +66,7 @@ export class DrawioModal extends Modal {
 		actions
 			.createEl('button', { text: 'Retry', cls: 'mod-cta' })
 			.addEventListener('click', () => this.startEditor());
-		actions
-			.createEl('button', { text: 'Close' })
-			.addEventListener('click', () => this.close());
+		actions.createEl('button', { text: 'Close' }).addEventListener('click', () => this.close());
 	}
 
 	onClose(): void {
