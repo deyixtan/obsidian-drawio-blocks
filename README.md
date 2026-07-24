@@ -5,11 +5,9 @@ Edit and render draw.io diagrams directly inside fenced Markdown code blocks in 
 ## Features
 
 - Renders inline `drawio` code blocks as SVG previews.
-- Opens diagrams.net when you click, tap, or activate a preview.
+- Opens diagrams.net when you click a preview.
 - Autosaves changes back to the exact Markdown code block.
 - Follows Obsidian's light or dark appearance automatically.
-- Uses one queued preview renderer instead of one editor iframe per diagram.
-- Sanitizes rendered SVG and removes remote resource references before display.
 - Remembers diagrams.net editor preferences per device.
 - Provides a command to reset the remembered editor preferences.
 
@@ -21,13 +19,11 @@ An internet connection is required to load the hosted diagrams.net editor and ge
 
 ### Community Plugins
 
-After the plugin is accepted into the Obsidian Community Plugins directory:
-
 1. Open **Settings → Community plugins**.
 2. Select **Browse** and search for **draw.io Blocks**.
 3. Install and enable the plugin.
 
-### Manual testing
+### Manual
 
 1. Build the plugin with `npm run build`, or download a release.
 2. Create this folder in your vault:
@@ -58,7 +54,7 @@ Run **Insert inline draw.io diagram** from the command palette while a Markdown 
 ```
 ````
 
-Switch to Reading view to see the rendered preview. Click or tap the preview to edit the diagram.
+Click or tap the preview to edit the diagram.
 
 The editor autosaves while it is open. Selecting **Exit** requests one final XML snapshot and closes the editor only after the Markdown block is updated successfully.
 
@@ -70,9 +66,7 @@ The editor autosaves while it is open. Selecting **Exit** requests one final XML
 
 ## Privacy and security
 
-The editor and preview renderer are loaded from `https://embed.diagrams.net`. Diagram XML is passed to that iframe in your local browser through the diagrams.net embed protocol. The plugin does not add analytics or telemetry.
-
-Cloud integrations, plugins, pickers, and custom shape libraries are disabled. Exported SVG is sanitized before display, and remote image, font, stylesheet, and SVG references are removed. Editor preferences are stored by diagrams.net in browser storage on each device and are not synchronized through your vault.
+The editor and preview renderer are loaded from `https://embed.diagrams.net`. Diagram XML is passed to that iframe in your local browser through the diagrams.net embed protocol.
 
 ## Development
 
