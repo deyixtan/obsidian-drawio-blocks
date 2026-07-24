@@ -1,19 +1,216 @@
-.drawio-mvp-card {
+.drawio-blocks-preview-card {
+	width: 100%;
+	margin: 0.75rem 0;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	overflow: visible;
+}
+
+/* Obsidian and third-party themes commonly round the original fenced-code
+ * <pre> element. Reset that host as well as the plugin-owned preview elements. */
+.markdown-rendered pre.drawio-blocks-codeblock-host,
+.markdown-preview-view pre.drawio-blocks-codeblock-host,
+pre.drawio-blocks-codeblock-host,
+.markdown-rendered pre:has(.drawio-blocks-preview-card),
+.markdown-preview-view pre:has(.drawio-blocks-preview-card),
+.drawio-blocks-codeblock-host {
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	overflow: visible !important;
+}
+
+.drawio-blocks-image-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 140px;
+	width: 100%;
+	overflow: auto;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	cursor: pointer;
+	outline: none;
+}
+
+.markdown-rendered img.drawio-blocks-preview-image,
+.markdown-preview-view img.drawio-blocks-preview-image,
+img.drawio-blocks-preview-image,
+.drawio-blocks-preview-image {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	padding: 0.75rem;
+	box-sizing: border-box;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	clip-path: none !important;
+	-webkit-mask-image: none !important;
+	mask-image: none !important;
+}
+
+.drawio-blocks-preview-image.is-loading {
+	visibility: hidden;
+}
+
+.drawio-blocks-preview-status {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	padding: 1rem;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
+	color: var(--text-muted);
+	text-align: center;
+	pointer-events: none;
 }
 
-.drawio-editor-modal {
-	width: min(96vw, 1400px);
-	height: 92vh;
+.drawio-blocks-preview-status:empty {
+	display: none;
+}
+
+.drawio-blocks-preview-status.is-error {
+	color: var(--text-error);
+}
+
+.drawio-blocks-edit-button {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border-radius: 999px;
+	opacity: 0;
+	transition: opacity 120ms ease;
+}
+
+.drawio-blocks-image-wrap:hover .drawio-blocks-edit-button,
+.drawio-blocks-image-wrap:focus-within .drawio-blocks-edit-button,
+.is-mobile .drawio-blocks-edit-button {
+	opacity: 1;
+}
+
+.drawio-blocks-modal {
+	width: min(96vw, 1600px);
+	height: min(94vh, 1100px);
 	max-width: none;
+	max-height: none;
 }
 
-.drawio-editor-modal .modal-content,
-.drawio-editor-frame {
+.drawio-blocks-modal .modal-content,
+.drawio-blocks-modal-content,
+.drawio-blocks-editor-shell {
 	width: 100%;
 	height: 100%;
 	padding: 0;
+	margin: 0;
+	overflow: hidden;
+}
+
+.drawio-blocks-modal .modal-close-button {
+	display: none;
+}
+
+.drawio-blocks-editor-shell {
+	position: relative;
+}
+
+.drawio-blocks-editor-loading {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--background-primary);
+	color: var(--text-muted);
+}
+
+.drawio-blocks-editor-frame {
+	display: block;
+	width: 100%;
+	height: 100%;
 	border: 0;
+	background: var(--background-primary);
+}
+
+.drawio-blocks-error {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	height: 100%;
+	padding: 2rem;
+	color: var(--text-normal);
+	text-align: center;
+	box-sizing: border-box;
+}
+
+.drawio-blocks-error h3,
+.drawio-blocks-error p {
+	margin: 0;
+}
+
+.drawio-blocks-error p {
+	max-width: 42rem;
+	color: var(--text-error);
+}
+
+.drawio-blocks-error-actions {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.drawio-blocks-exporter {
+	position: fixed;
+	left: -10000px;
+	top: -10000px;
+	width: 1024px;
+	height: 768px;
+	opacity: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.drawio-blocks-exporter iframe {
+	width: 1024px;
+	height: 768px;
+	border: 0;
+}
+
+@media (max-width: 700px), (hover: none) {
+	.drawio-blocks-modal {
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100dvh;
+		max-width: 100vw;
+		max-height: 100dvh;
+		border-radius: 0;
+	}
+
+	.drawio-blocks-modal .modal-content {
+		border-radius: 0;
+	}
+
+	.drawio-blocks-preview-image {
+		padding: 0.25rem;
+	}
 }

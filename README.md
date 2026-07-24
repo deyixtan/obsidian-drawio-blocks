@@ -1,92 +1,106 @@
-# Obsidian Sample Plugin
+# draw.io Blocks
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Edit and render draw.io diagrams directly inside fenced Markdown code blocks in Obsidian. The plugin uses the hosted diagrams.net embed editor and supports desktop and mobile.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+- Renders inline `drawio` code blocks as SVG previews.
+- Opens diagrams.net when you click, tap, or activate a preview.
+- Autosaves changes back to the exact Markdown code block.
+- Follows Obsidian's light or dark appearance automatically.
+- Uses one queued preview renderer instead of one editor iframe per diagram.
+- Sanitizes rendered SVG and removes remote resource references before display.
+- Remembers diagrams.net editor preferences per device.
+- Provides a command to reset the remembered editor preferences.
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## Requirements
 
-## First time developing plugins?
+An internet connection is required to load the hosted diagrams.net editor and generate previews. The plugin does not bundle an offline editor.
 
-Quick starting guide for new plugin devs:
+## Installation
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### Community Plugins
 
-## Releasing new releases
+After the plugin is accepted into the Obsidian Community Plugins directory:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. Open **Settings → Community plugins**.
+2. Select **Browse** and search for **draw.io Blocks**.
+3. Install and enable the plugin.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### Manual testing
 
-## Adding your plugin to the community plugin list
+1. Build the plugin with `npm run build`, or download a release.
+2. Create this folder in your vault:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+   ```text
+   <vault>/.obsidian/plugins/obsidian-drawio-blocks/
+   ```
 
-## How to use
+3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder.
+4. Reload Obsidian and enable **draw.io Blocks** under **Settings → Community plugins**.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## Usage
 
-## Manually installing the plugin
+Run **Insert inline draw.io diagram** from the command palette while a Markdown note is active. You can also create a block manually:
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+````markdown
+```drawio
+<mxfile>
+  <diagram id="page-1" name="Page-1">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+```
+````
 
-## Improve code quality with eslint
+Switch to Reading view to see the rendered preview. Click or tap the preview to edit the diagram.
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+The editor autosaves while it is open. Selecting **Exit** requests one final XML snapshot and closes the editor only after the Markdown block is updated successfully.
 
-## Funding URL
+## Commands
 
-You can include funding URLs where people who use your plugin can financially support it.
+- **Insert inline draw.io diagram** — inserts a starter `drawio` block into the active Markdown note.
+- **Refresh draw.io previews** — regenerates every visible diagram preview.
+- **Reset draw.io editor settings** — resets locally remembered diagrams.net preferences the next time the editor opens.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## Privacy and security
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+The editor and preview renderer are loaded from `https://embed.diagrams.net`. Diagram XML is passed to that iframe in your local browser through the diagrams.net embed protocol. The plugin does not add analytics or telemetry.
+
+Cloud integrations, plugins, pickers, and custom shape libraries are disabled. Exported SVG is sanitized before display, and remote image, font, stylesheet, and SVG references are removed. Editor preferences are stored by diagrams.net in browser storage on each device and are not synchronized through your vault.
+
+## Development
+
+Requirements: Node.js 20 or newer and npm.
+
+```bash
+npm ci
+npm run dev
 ```
 
-If you have multiple URLs, you can also do:
+Useful checks:
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+```bash
+npm run format
+npm run format:check
+npm run lint
+npm run build
 ```
 
-## API Documentation
+The production build creates `main.js`. Do not commit that generated file; attach `main.js`, `manifest.json`, and `styles.css` individually to each GitHub release.
 
-See https://docs.obsidian.md
+## Release
+
+1. Update the version with `npm version <version>`.
+2. Run `npm run format:check`, `npm run lint`, and `npm run build`.
+3. Create a Git tag that exactly matches the manifest version, without a `v` prefix.
+4. Push the tag. The release workflow creates a draft GitHub release with the required assets.
+
+## Attribution
+
+This plugin integrates the hosted diagrams.net editor through its embed API. It is not affiliated with or endorsed by diagrams.net.

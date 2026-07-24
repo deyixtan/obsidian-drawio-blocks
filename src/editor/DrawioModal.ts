@@ -1,103 +1,80 @@
 import { App, Modal } from 'obsidian';
-import { DRAWIO_EDITOR_URL, DRAWIO_ORIGIN } from '../constants';
 import type { DrawioSource } from '../source/DrawioSource';
+import { DrawioBridge } from './DrawioBridge';
 
 export class DrawioModal extends Modal {
-	private iframe: HTMLIFrameElement | null = null;
-	private onMessage: ((event: MessageEvent) => void) | null = null;
+	private bridge: DrawioBridge | null = null;
+	private shell: HTMLElement | null = null;
 
 	constructor(
 		app: App,
 		private source: DrawioSource,
+		private dark: boolean,
+		private editorSettingsVersion: string,
+		private onSaved?: (xml: string) => void,
 	) {
 		super(app);
 	}
 
 	onOpen(): void {
-		this.modalEl.addClass('drawio-editor-modal');
+		this.modalEl.addClass('drawio-blocks-modal');
+		this.contentEl.addClass('drawio-blocks-modal-content');
 		this.contentEl.empty();
+		this.shell = this.contentEl.createDiv({ cls: 'drawio-blocks-editor-shell' });
+		this.startEditor();
+	}
 
-		const params = new URLSearchParams({
-			embed: '1',
-			proto: 'json',
-			spin: '1',
-			saveAndExit: '1',
+	private startEditor(): void {
+		if (!this.shell) return;
+
+		this.bridge?.destroy();
+		this.bridge = null;
+		this.shell.empty();
+
+		const loading = this.shell.createDiv({
+			cls: 'drawio-blocks-editor-loading',
+			text: 'Loading diagrams.net…',
 		});
 
-		this.iframe = this.contentEl.createEl('iframe', {
-			cls: 'drawio-editor-frame',
-			attr: {
-				src: `${DRAWIO_EDITOR_URL}?${params.toString()}`,
-				title: this.source.title(),
-				sandbox:
-					'allow-scripts allow-same-origin allow-forms allow-modals',
-				referrerpolicy: 'no-referrer',
-			},
+		this.bridge = new DrawioBridge(this.shell, this.source, this.dark, {
+			settingsVersion: this.editorSettingsVersion,
+			onExit: () => this.close(),
+			onSaved: this.onSaved,
+			onReady: () => loading.remove(),
+			onError: (error) => this.showError(error),
 		});
 
-		const iframe = this.iframe;
+		void this.bridge
+			.mount()
+			.catch((error: unknown) =>
+				this.showError(error instanceof Error ? error : new Error(String(error))),
+			);
+	}
 
-		this.onMessage = (event: MessageEvent) => {
-			if (event.origin !== DRAWIO_ORIGIN) return;
-			if (event.source !== iframe.contentWindow) return;
+	private showError(error: Error): void {
+		if (!this.shell) return;
 
-			let message: unknown;
-			try {
-				message =
-					typeof event.data === 'string'
-						? JSON.parse(event.data)
-						: event.data;
-			} catch {
-				return;
-			}
+		this.bridge?.destroy();
+		this.bridge = null;
+		this.shell.empty();
 
-			if (!message || typeof message !== 'object') return;
-			void this.handleMessage(message as Record<string, unknown>);
-		};
+		const panel = this.shell.createDiv({ cls: 'drawio-blocks-error' });
+		panel.createEl('h3', { text: 'Could not open the draw.io editor' });
+		panel.createEl('p', { text: error.message });
 
-		window.addEventListener('message', this.onMessage);
+		const actions = panel.createDiv({ cls: 'drawio-blocks-error-actions' });
+		actions
+			.createEl('button', { text: 'Retry', cls: 'mod-cta' })
+			.addEventListener('click', () => this.startEditor());
+		actions
+			.createEl('button', { text: 'Close' })
+			.addEventListener('click', () => this.close());
 	}
 
 	onClose(): void {
-		if (this.onMessage) {
-			window.removeEventListener('message', this.onMessage);
-		}
-
-		this.onMessage = null;
-		this.iframe = null;
+		this.bridge?.destroy();
+		this.bridge = null;
+		this.shell = null;
 		this.contentEl.empty();
-	}
-
-	private async handleMessage(
-		message: Record<string, unknown>,
-	): Promise<void> {
-		if (message.event === 'init') {
-			const xml = await this.source.read();
-
-			this.post({
-				action: 'load',
-				xml,
-				autosave: 0,
-			});
-		}
-
-		if (message.event === 'save' && typeof message.xml === 'string') {
-			await this.source.write(message.xml);
-
-			if (message.exit === true) {
-				this.close();
-			}
-		}
-
-		if (message.event === 'exit') {
-			this.close();
-		}
-	}
-
-	private post(message: object): void {
-		this.iframe?.contentWindow?.postMessage(
-			JSON.stringify(message),
-			DRAWIO_ORIGIN,
-		);
 	}
 }

@@ -1,8 +1,8 @@
 {
 	"id": "obsidian-drawio-blocks",
 	"name": "draw.io Blocks",
-	"version": "0.1.0",
-	"minAppVersion": "1.0.0",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
 	"description": "Mobile-friendly editing and rendering of draw.io XML inside fenced Markdown code blocks.",
 	"author": "Deyi",
 	"authorUrl": "https://github.com/deyixtan",
