@@ -1,6 +1,8 @@
 # draw.io Blocks
 
-Edit and render draw.io diagrams directly inside fenced Markdown code blocks in Obsidian. The plugin uses the hosted diagrams.net embed editor and supports desktop and mobile.
+An Obsidian plugin for editing and rendering draw.io XML inline in fenced Markdown code blocks using the online diagrams.net editor.
+
+The plugin uses the hosted diagrams.net embed editor and supports both desktop and mobile.
 
 ## Features
 

@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-drawio-blocks",
-	"version": "1.0.0",
-	"description": "Mobile-friendly editing and rendering of draw.io XML inside fenced Markdown code blocks.",
+	"name": "drawio-blocks",
+	"version": "1.0.1",
+	"description": "An Obsidian plugin for editing and rendering draw.io XML inline in fenced Markdown code blocks using the online diagrams.net editor.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
