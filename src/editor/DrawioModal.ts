@@ -11,6 +11,7 @@ export class DrawioModal extends Modal {
 		private source: DrawioSource,
 		private dark: boolean,
 		private editorSettingsVersion: string,
+		private compressXml: boolean,
 		private onSaved?: (xml: string) => void,
 	) {
 		super(app);
@@ -38,6 +39,7 @@ export class DrawioModal extends Modal {
 
 		this.bridge = new DrawioBridge(this.shell, this.source, this.dark, {
 			settingsVersion: this.editorSettingsVersion,
+			compressXml: this.compressXml,
 			onExit: () => this.close(),
 			onSaved: this.onSaved,
 			onReady: () => loading.remove(),

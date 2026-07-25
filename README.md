@@ -1,102 +1,84 @@
 # draw.io Blocks
 
-An Obsidian plugin for editing and rendering draw.io XML inline in fenced Markdown code blocks using the online diagrams.net editor.
+Edit and render draw.io diagrams directly inside Obsidian Markdown code blocks using the hosted diagrams.net editor.
 
-The plugin uses the hosted diagrams.net embed editor and supports both desktop and mobile.
+Supports desktop and mobile.
 
 ## Features
 
-- Renders inline `drawio` code blocks as SVG previews.
-- Opens diagrams.net when you click a preview.
-- Autosaves changes back to the exact Markdown code block.
-- Follows Obsidian's light or dark appearance automatically.
-- Remembers diagrams.net editor preferences per device.
-- Provides a command to reset the remembered editor preferences.
+- Renders `drawio` code blocks as SVG previews
+- Opens diagrams.net when a preview is selected
+- Autosaves changes to the original Markdown block
+- Supports Obsidian light and dark themes
+- Optionally stores diagrams as compressed XML
 
 ## Requirements
 
-An internet connection is required to load the hosted diagrams.net editor and generate previews. The plugin does not bundle an offline editor.
+An internet connection is required to load the hosted diagrams.net editor and generate previews.
 
 ## Installation
 
-### Community Plugins
+Install **draw.io Blocks** from **Settings → Community plugins → Browse**.
 
-1. Open **Settings → Community plugins**.
-2. Select **Browse** and search for **draw.io Blocks**.
-3. Install and enable the plugin.
+For manual installation, copy `main.js`, `manifest.json`, and `styles.css` into:
 
-### Manual
+```text
+<vault>/.obsidian/plugins/obsidian-drawio-blocks/
+```
 
-1. Build the plugin with `npm run build`, or download a release.
-2. Create this folder in your vault:
-
-    ```text
-    <vault>/.obsidian/plugins/obsidian-drawio-blocks/
-    ```
-
-3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder.
-4. Reload Obsidian and enable **draw.io Blocks** under **Settings → Community plugins**.
+Then reload Obsidian and enable the plugin.
 
 ## Usage
 
-Run **Insert inline draw.io diagram** from the command palette while a Markdown note is active. You can also create a block manually:
+Run **Insert inline draw.io diagram** from the command palette, or create an empty `drawio` code block:
 
 ````markdown
 ```drawio
-<mxfile>
-  <diagram id="page-1" name="Page-1">
-    <mxGraphModel>
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>
+
 ```
 ````
 
-Click or tap the preview to edit the diagram.
+Select the rendered preview to open the diagrams.net editor. Changes are saved automatically to the Markdown block.
 
-The editor autosaves while it is open. Selecting **Exit** requests one final XML snapshot and closes the editor only after the Markdown block is updated successfully.
+## Settings
+
+### Compress diagram XML
+
+Stores diagrams using draw.io's compressed XML format.
+
+This reduces Markdown block size, but makes the contents less readable and produces less useful Git diffs.
+
+Existing diagrams are converted the next time they are opened and saved.
 
 ## Commands
 
-- **Insert inline draw.io diagram** — inserts a starter `drawio` block into the active Markdown note.
-- **Refresh draw.io previews** — regenerates every visible diagram preview.
-- **Reset draw.io editor settings** — resets locally remembered diagrams.net preferences the next time the editor opens.
+- **Insert inline draw.io diagram**
+- **Refresh draw.io previews**
+- **Reset draw.io editor settings**
 
 ## Privacy and security
 
-The editor and preview renderer are loaded from `https://embed.diagrams.net`. Diagram XML is passed to that iframe in your local browser through the diagrams.net embed protocol.
+The editor and preview renderer are loaded from `https://embed.diagrams.net`. Diagram XML is passed to the hosted iframe through the diagrams.net embed protocol.
+
+For more information, visit draw.io's [security documentation](https://www.drawio.com/docs/security/) and [privacy policy](https://www.drawio.com/trust/).
 
 ## Development
 
-Requirements: Node.js 20 or newer and npm.
+Requires Node.js 20 or newer.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Useful checks:
+Before releasing:
 
 ```bash
-npm run format
 npm run format:check
 npm run lint
 npm run build
 ```
 
-The production build creates `main.js`. Do not commit that generated file; attach `main.js`, `manifest.json`, and `styles.css` individually to each GitHub release.
-
-## Release
-
-1. Update the version with `npm version <version>`.
-2. Run `npm run format:check`, `npm run lint`, and `npm run build`.
-3. Create a Git tag that exactly matches the manifest version, without a `v` prefix.
-4. Push the tag. The release workflow creates a draft GitHub release with the required assets.
-
 ## Attribution
 
-This plugin integrates the hosted diagrams.net editor through its embed API. It is not affiliated with or endorsed by diagrams.net.
+This plugin uses the hosted diagrams.net editor and is not affiliated with or endorsed by diagrams.net.

@@ -24,6 +24,7 @@ interface DrawioEvent {
 
 export interface DrawioBridgeOptions {
 	settingsVersion?: string;
+	compressXml?: boolean;
 	onExit?: () => void;
 	onSaved?: (xml: string) => void;
 	onReady?: () => void;
@@ -142,6 +143,7 @@ export class DrawioBridge {
 						suppressNewWindows: true,
 						settingsName: 'drawio-blocks',
 						override: false,
+						compressXml: this.options.compressXml ?? false,
 						version: this.options.settingsVersion ?? DEFAULT_EDITOR_SETTINGS_VERSION,
 						defaultLibraries: 'general;uml;er;bpmn;flowchart;basic;arrows2',
 						enabledLibraries: null,

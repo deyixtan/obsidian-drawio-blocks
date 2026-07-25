@@ -1,9 +1,12 @@
 import {
+	App,
 	MarkdownPostProcessorContext,
 	MarkdownRenderChild,
 	MarkdownView,
 	Notice,
 	Plugin,
+	PluginSettingTab,
+	Setting,
 } from 'obsidian';
 import { DEFAULT_EDITOR_SETTINGS_VERSION, EMPTY_DRAWIO_XML } from './constants';
 import { DrawioModal } from './editor/DrawioModal';
@@ -15,23 +18,32 @@ import { mountPreview, type PreviewHandle } from './view/renderPreview';
 
 interface DrawioBlocksPluginData {
 	editorSettingsVersion?: string;
+	compressXml?: boolean;
 }
 
 export default class DrawioBlocksPlugin extends Plugin {
 	readonly previewService = new PreviewService();
+
+	compressXml = false;
 
 	private readonly previewHandles = new Set<PreviewHandle>();
 	private editorSettingsVersion = DEFAULT_EDITOR_SETTINGS_VERSION;
 
 	async onload(): Promise<void> {
 		const data: unknown = await this.loadData();
-		if (
-			this.isPluginData(data) &&
-			typeof data.editorSettingsVersion === 'string' &&
-			data.editorSettingsVersion.length > 0
-		) {
-			this.editorSettingsVersion = data.editorSettingsVersion;
+
+		if (this.isPluginData(data)) {
+			if (
+				typeof data.editorSettingsVersion === 'string' &&
+				data.editorSettingsVersion.length > 0
+			) {
+				this.editorSettingsVersion = data.editorSettingsVersion;
+			}
+
+			this.compressXml = data.compressXml === true;
 		}
+
+		this.addSettingTab(new DrawioBlocksSettingTab(this.app, this));
 
 		this.registerMarkdownCodeBlockProcessor('drawio', (source, element, context) => {
 			this.renderCodeBlock(source, element, context);
@@ -54,9 +66,8 @@ export default class DrawioBlocksPlugin extends Plugin {
 			name: 'Reset draw.io editor settings',
 			callback: async () => {
 				this.editorSettingsVersion = Date.now().toString();
-				await this.saveData({
-					editorSettingsVersion: this.editorSettingsVersion,
-				} satisfies DrawioBlocksPluginData);
+				await this.savePluginData();
+
 				new Notice(
 					'draw.io editor settings will reset the next time the editor is opened.',
 				);
@@ -80,6 +91,7 @@ export default class DrawioBlocksPlugin extends Plugin {
 			source,
 			this.isDark(),
 			this.editorSettingsVersion,
+			this.compressXml,
 			onSaved,
 		).open();
 	}
@@ -127,9 +139,41 @@ export default class DrawioBlocksPlugin extends Plugin {
 		return value !== null && typeof value === 'object';
 	}
 
+	async savePluginData(): Promise<void> {
+		await this.saveData({
+			editorSettingsVersion: this.editorSettingsVersion,
+			compressXml: this.compressXml,
+		} satisfies DrawioBlocksPluginData);
+	}
+
 	private refreshAllPreviews(): void {
 		for (const handle of this.previewHandles) {
 			handle.refresh();
 		}
+	}
+}
+
+class DrawioBlocksSettingTab extends PluginSettingTab {
+	constructor(
+		app: App,
+		private plugin: DrawioBlocksPlugin,
+	) {
+		super(app, plugin);
+	}
+
+	display(): void {
+		this.containerEl.empty();
+
+		new Setting(this.containerEl)
+			.setName('Compress diagram XML')
+			.setDesc(
+				'Store diagrams using draw.io compression. Existing diagrams are converted the next time they are saved.',
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.compressXml).onChange(async (value) => {
+					this.plugin.compressXml = value;
+					await this.plugin.savePluginData();
+				}),
+			);
 	}
 }
