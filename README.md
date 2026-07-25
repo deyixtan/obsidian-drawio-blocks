@@ -1,6 +1,6 @@
 # draw.io Blocks
 
-Edit and render draw.io diagrams directly inside Obsidian Markdown code blocks using the hosted diagrams.net editor.
+Edit and render draw.io diagrams directly inside Markdown code blocks using the hosted diagrams.net editor.
 
 Supports desktop and mobile.
 
@@ -74,9 +74,25 @@ npm run dev
 Before releasing:
 
 ```bash
+npm run format
 npm run format:check
 npm run lint
 npm run build
+```
+
+## Release
+
+Update the version, commit the changes, create a matching Git tag, and push both:
+
+```bash
+npm version <version> --no-git-tag-version
+
+git add -A
+git commit -m "<message>"
+
+git tag <version>
+git push
+git push origin <version>
 ```
 
 ## Attribution

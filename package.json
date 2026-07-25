@@ -1,7 +1,7 @@
 {
 	"name": "drawio-blocks",
-	"version": "1.0.4",
-	"description": "Edit and render draw.io diagrams directly inside Obsidian Markdown code blocks using the hosted diagrams.net editor.",
+	"version": "1.0.5",
+	"description": "Edit and render draw.io diagrams directly inside Markdown code blocks using the hosted diagrams.net editor.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
