@@ -34,12 +34,14 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	box-sizing: border-box;
 	width: 100%;
 	min-height: 140px;
+	padding: 0.75rem;
 	overflow: visible;
 	cursor: default;
 	background: transparent;
-	border: 0;
+	border: 1px solid var(--drawio-blocks-preview-border-color, #808080);
 	border-radius: 0;
 	box-shadow: none;
 	outline: none;
@@ -50,22 +52,24 @@
 .markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
 	display: block;
 	box-sizing: border-box;
-	width: 100%;
+	width: auto;
 	max-width: 100%;
 	height: auto;
-	padding: 0.75rem;
+	padding: 0;
 	pointer-events: none;
 	user-select: none;
 	object-fit: contain;
 	background: transparent;
-	border: 1px solid var(--drawio-blocks-preview-border-color, #808080);
+	border: 0;
 	border-radius: 0;
 	box-shadow: none;
 }
 
 .markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap.is-empty.has-preview,
 .markdown-preview-view .drawio-blocks-preview-card .drawio-blocks-image-wrap.is-empty.has-preview {
+	height: var(--drawio-blocks-empty-preview-height);
 	min-height: var(--drawio-blocks-empty-preview-height);
+	padding: 1px 0.25rem;
 }
 
 .markdown-rendered
@@ -76,8 +80,8 @@
 	.drawio-blocks-preview-card
 	.drawio-blocks-image-wrap.is-empty.has-preview
 	img.drawio-blocks-preview-image {
-	height: var(--drawio-blocks-empty-preview-height);
-	padding: 1px 0.25rem;
+	width: 100%;
+	height: 100%;
 }
 
 .markdown-rendered
@@ -86,7 +90,9 @@
 .markdown-preview-view
 	.drawio-blocks-preview-card
 	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within {
+	height: var(--drawio-blocks-empty-actions-height);
 	min-height: var(--drawio-blocks-empty-actions-height);
+	padding: 0.5rem;
 }
 
 .markdown-rendered
@@ -97,12 +103,11 @@
 	.drawio-blocks-preview-card
 	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within
 	img.drawio-blocks-preview-image {
-	height: var(--drawio-blocks-empty-actions-height);
-	padding: 0.5rem;
+	height: 100%;
 }
 
-.markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image.has-grid,
-.markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image.has-grid {
+.markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap.has-grid,
+.markdown-preview-view .drawio-blocks-preview-card .drawio-blocks-image-wrap.has-grid {
 	background-color: var(--background-primary);
 	background-image:
 		linear-gradient(
@@ -216,7 +221,9 @@
 	.markdown-preview-view
 		.drawio-blocks-preview-card
 		.drawio-blocks-image-wrap.is-empty.has-preview:hover {
+		height: var(--drawio-blocks-empty-actions-height);
 		min-height: var(--drawio-blocks-empty-actions-height);
+		padding: 0.5rem;
 	}
 
 	.markdown-rendered
@@ -227,8 +234,7 @@
 		.drawio-blocks-preview-card
 		.drawio-blocks-image-wrap.is-empty.has-preview:hover
 		img.drawio-blocks-preview-image {
-		height: var(--drawio-blocks-empty-actions-height);
-		padding: 0.5rem;
+		height: 100%;
 	}
 }
 
@@ -344,8 +350,8 @@
 		border-radius: 0;
 	}
 
-	.markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image,
-	.markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
+	.markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap,
+	.markdown-preview-view .drawio-blocks-preview-card .drawio-blocks-image-wrap {
 		padding: 0.5rem;
 	}
 }

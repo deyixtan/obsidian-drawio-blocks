@@ -71,12 +71,15 @@ export function mountPreview(
 
 	const updateAppearance = (): void => {
 		updateEmptyPreviewHeight();
-		image.style.setProperty('--drawio-blocks-preview-border-color', plugin.previewBorderColor);
-		image.style.setProperty(
+		imageWrap.style.setProperty(
+			'--drawio-blocks-preview-border-color',
+			plugin.previewBorderColor,
+		);
+		imageWrap.style.setProperty(
 			'--drawio-blocks-preview-grid-color',
 			`${plugin.previewBorderColor}3d`,
 		);
-		image.classList.toggle('has-grid', plugin.showPreviewGrid);
+		imageWrap.classList.toggle('has-grid', plugin.showPreviewGrid);
 	};
 
 	const refresh = (): void => {
@@ -158,6 +161,8 @@ export function mountPreview(
 			imageWrap.removeEventListener('click', onPreviewClick);
 			image.removeAttribute('src');
 			container.style.removeProperty('--drawio-blocks-empty-preview-height');
+			imageWrap.style.removeProperty('--drawio-blocks-preview-border-color');
+			imageWrap.style.removeProperty('--drawio-blocks-preview-grid-color');
 			codeBlockHost?.removeClass('drawio-blocks-codeblock-host');
 		},
 	};
