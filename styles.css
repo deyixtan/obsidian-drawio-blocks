@@ -1,5 +1,8 @@
 .markdown-rendered .drawio-blocks-preview-card,
 .markdown-preview-view .drawio-blocks-preview-card {
+	--drawio-blocks-empty-preview-height: 1.5em;
+	--drawio-blocks-empty-actions-height: calc(var(--input-height) + 1.5rem);
+
 	width: 100%;
 	margin: 0.75rem 0;
 	padding: 0;
@@ -8,6 +11,11 @@
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
+}
+
+.markdown-rendered .drawio-blocks-preview-card.is-empty,
+.markdown-preview-view .drawio-blocks-preview-card.is-empty {
+	margin-block: 0;
 }
 
 .markdown-rendered pre.drawio-blocks-codeblock-host,
@@ -42,15 +50,55 @@
 .markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
 	display: block;
 	box-sizing: border-box;
+	width: 100%;
 	max-width: 100%;
 	height: auto;
 	padding: 0.75rem;
 	pointer-events: none;
 	user-select: none;
+	object-fit: contain;
 	background: transparent;
 	border: 1px solid var(--drawio-blocks-preview-border-color, #808080);
 	border-radius: 0;
 	box-shadow: none;
+}
+
+.markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap.is-empty.has-preview,
+.markdown-preview-view .drawio-blocks-preview-card .drawio-blocks-image-wrap.is-empty.has-preview {
+	min-height: var(--drawio-blocks-empty-preview-height);
+}
+
+.markdown-rendered
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview
+	img.drawio-blocks-preview-image,
+.markdown-preview-view
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview
+	img.drawio-blocks-preview-image {
+	height: var(--drawio-blocks-empty-preview-height);
+	padding: 1px 0.25rem;
+}
+
+.markdown-rendered
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within,
+.markdown-preview-view
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within {
+	min-height: var(--drawio-blocks-empty-actions-height);
+}
+
+.markdown-rendered
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within
+	img.drawio-blocks-preview-image,
+.markdown-preview-view
+	.drawio-blocks-preview-card
+	.drawio-blocks-image-wrap.is-empty.has-preview:focus-within
+	img.drawio-blocks-preview-image {
+	height: var(--drawio-blocks-empty-actions-height);
+	padding: 0.5rem;
 }
 
 .markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image.has-grid,
@@ -161,6 +209,27 @@
 		opacity: 1;
 		pointer-events: auto;
 	}
+
+	.markdown-rendered
+		.drawio-blocks-preview-card
+		.drawio-blocks-image-wrap.is-empty.has-preview:hover,
+	.markdown-preview-view
+		.drawio-blocks-preview-card
+		.drawio-blocks-image-wrap.is-empty.has-preview:hover {
+		min-height: var(--drawio-blocks-empty-actions-height);
+	}
+
+	.markdown-rendered
+		.drawio-blocks-preview-card
+		.drawio-blocks-image-wrap.is-empty.has-preview:hover
+		img.drawio-blocks-preview-image,
+	.markdown-preview-view
+		.drawio-blocks-preview-card
+		.drawio-blocks-image-wrap.is-empty.has-preview:hover
+		img.drawio-blocks-preview-image {
+		height: var(--drawio-blocks-empty-actions-height);
+		padding: 0.5rem;
+	}
 }
 
 .drawio-blocks-modal {
@@ -188,10 +257,10 @@
 	position: relative;
 }
 
-.drawio-blocks-editor-tab {
+.workspace-leaf-content[data-type='drawio-blocks-editor'] .view-content.drawio-blocks-editor-tab {
 	box-sizing: border-box;
 	height: 100%;
-	padding: 0 !important;
+	padding: 0;
 	overflow: hidden;
 }
 
@@ -277,14 +346,6 @@
 
 	.markdown-rendered .drawio-blocks-preview-card img.drawio-blocks-preview-image,
 	.markdown-preview-view .drawio-blocks-preview-card img.drawio-blocks-preview-image {
-		padding: 0.25rem;
-	}
-}
-
-@media (hover: none), (pointer: coarse) {
-	.drawio-blocks-image-wrap.has-preview .drawio-blocks-preview-actions,
-	.drawio-blocks-image-wrap.has-error .drawio-blocks-preview-actions {
-		opacity: 1;
-		pointer-events: auto;
+		padding: 0.5rem;
 	}
 }

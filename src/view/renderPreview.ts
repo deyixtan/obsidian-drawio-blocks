@@ -1,5 +1,6 @@
 import type DrawioBlocksPlugin from '../main';
 import type { DrawioSource } from '../source/DrawioSource';
+import { isDrawioDiagramEmpty } from '../utils/xml';
 
 export interface PreviewHandle {
 	refresh(): void;
@@ -25,7 +26,14 @@ export function mountPreview(
 	const codeBlockHost = container.closest('pre');
 	codeBlockHost?.addClass('drawio-blocks-codeblock-host');
 
-	const imageWrap = container.createDiv({ cls: 'drawio-blocks-image-wrap' });
+	const imageWrap = container.createDiv({
+		cls: 'drawio-blocks-image-wrap',
+		attr: {
+			role: 'group',
+			tabindex: '0',
+			'aria-label': `${source.title()} preview. Select to show editor actions.`,
+		},
+	});
 	const status = imageWrap.createDiv({
 		cls: 'drawio-blocks-preview-status',
 		text: 'Rendering diagram…',
@@ -48,7 +56,21 @@ export function mountPreview(
 
 	image.draggable = false;
 
+	const updateEmptyPreviewHeight = (): void => {
+		const view = container.ownerDocument.defaultView;
+		const style = view?.getComputedStyle(codeBlockHost ?? container);
+		const lineHeight = Number.parseFloat(style?.lineHeight ?? '');
+		const fontSize = Number.parseFloat(style?.fontSize ?? '');
+		const height = Number.isFinite(lineHeight)
+			? lineHeight
+			: Number.isFinite(fontSize)
+				? fontSize * 1.5
+				: 24;
+		container.style.setProperty('--drawio-blocks-empty-preview-height', `${height}px`);
+	};
+
 	const updateAppearance = (): void => {
+		updateEmptyPreviewHeight();
 		image.style.setProperty('--drawio-blocks-preview-border-color', plugin.previewBorderColor);
 		image.style.setProperty(
 			'--drawio-blocks-preview-grid-color',
@@ -68,7 +90,12 @@ export function mountPreview(
 		image.removeAttribute('src');
 
 		void xmlProvider()
-			.then((xml) => plugin.previewService.render(xml, { dark: plugin.isDark() }))
+			.then((xml) => {
+				const empty = isDrawioDiagramEmpty(xml);
+				container.toggleClass('is-empty', empty);
+				imageWrap.toggleClass('is-empty', empty);
+				return plugin.previewService.render(xml, { dark: plugin.isDark() });
+			})
 			.then((uri) => {
 				if (destroyed || current !== generation) return;
 				image.src = uri;
@@ -107,9 +134,15 @@ export function mountPreview(
 		event.stopPropagation();
 		openEditor(true);
 	};
+	const onPreviewClick = (): void => {
+		if (imageWrap.hasClass('has-preview') || imageWrap.hasClass('has-error')) {
+			imageWrap.focus({ preventScroll: true });
+		}
+	};
 
 	editButton.addEventListener('click', onEditClick);
 	tabButton.addEventListener('click', onTabClick);
+	imageWrap.addEventListener('click', onPreviewClick);
 
 	updateAppearance();
 	refresh();
@@ -122,7 +155,9 @@ export function mountPreview(
 			generation += 1;
 			editButton.removeEventListener('click', onEditClick);
 			tabButton.removeEventListener('click', onTabClick);
+			imageWrap.removeEventListener('click', onPreviewClick);
 			image.removeAttribute('src');
+			container.style.removeProperty('--drawio-blocks-empty-preview-height');
 			codeBlockHost?.removeClass('drawio-blocks-codeblock-host');
 		},
 	};

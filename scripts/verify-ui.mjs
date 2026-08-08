@@ -3,13 +3,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [preview, settings, styles, editorView, editorTitle, plugin] = await Promise.all([
+const [preview, settings, styles, editorView, editorTitle, plugin, xml] = await Promise.all([
 	readFile(path.join(projectRoot, 'src', 'view', 'renderPreview.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'settings', 'DrawioBlocksSettingTab.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'styles.css'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'editor', 'DrawioEditorView.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'editor', 'editorTitle.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'main.ts'), 'utf8'),
+	readFile(path.join(projectRoot, 'src', 'utils', 'xml.ts'), 'utf8'),
 ]);
 
 for (const value of [
@@ -21,6 +22,12 @@ for (const value of [
 	'has-grid',
 	'is-unavailable',
 	'has-error',
+	"tabindex: '0'",
+	'imageWrap.focus',
+	'isDrawioDiagramEmpty',
+	"container.toggleClass('is-empty'",
+	'getComputedStyle',
+	'lineHeight',
 ]) {
 	if (!preview.includes(value)) throw new Error(`Preview UI is missing ${value}.`);
 }
@@ -31,14 +38,32 @@ if (styles.includes('Click to edit') || styles.includes('Tap to edit')) {
 if (preview.includes('drawio-blocks-preview-action mod-cta')) {
 	throw new Error('The two preview actions do not use the same button style.');
 }
+if (styles.includes('!important')) {
+	throw new Error('Plugin styling must not rely on !important overrides.');
+}
+if (styles.includes('@media (hover: none), (pointer: coarse)')) {
+	throw new Error('Touch devices still force the preview actions to remain visible.');
+}
 for (const value of [
 	'drawio-blocks-preview-actions',
 	'is-unavailable',
 	'drawio-blocks-offline-spinner',
 	'drawio-blocks-preview-image.has-grid',
 	'border: 1px solid var(--drawio-blocks-preview-border-color',
+	'is-empty.has-preview',
+	'--drawio-blocks-empty-preview-height',
+	'--drawio-blocks-empty-preview-height: 1.5em',
+	'--drawio-blocks-empty-actions-height',
+	'min-height: var(--drawio-blocks-empty-actions-height)',
+	'margin-block: 0',
+	'height: auto',
+	'object-fit: contain',
+	"[data-type='drawio-blocks-editor']",
 ]) {
 	if (!styles.includes(value)) throw new Error(`Plugin styling is missing ${value}.`);
+}
+for (const value of ['isDrawioDiagramEmpty', "getAttribute('vertex')", "getAttribute('edge')"]) {
+	if (!xml.includes(value)) throw new Error(`Empty-diagram detection is missing ${value}.`);
 }
 for (const value of [
 	'getSettingDefinitions',
@@ -70,5 +95,5 @@ for (const value of [
 }
 
 process.stdout.write(
-	'Verified preview appearance controls, offline toggle state, editor titles, and error overlay\n',
+	'Verified compact full-width preview, touch action disclosure, settings, editor titles, and error overlay\n',
 );

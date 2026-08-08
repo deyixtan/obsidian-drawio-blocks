@@ -6,6 +6,18 @@ export function normalizeDrawioXml(xml: string): string {
 	return trimmed;
 }
 
+export function isDrawioDiagramEmpty(xml: string): boolean {
+	if (!xml.trim()) return true;
+
+	const doc = new DOMParser().parseFromString(xml, 'application/xml');
+	if (doc.querySelector('parsererror')) return false;
+	if (doc.getElementsByTagName('mxGraphModel').length === 0) return false;
+
+	return !Array.from(doc.getElementsByTagName('mxCell')).some(
+		(cell) => cell.getAttribute('vertex') === '1' || cell.getAttribute('edge') === '1',
+	);
+}
+
 export function validateDrawioXml(xml: string): void {
 	const normalized = normalizeDrawioXml(xml);
 	const doc = new DOMParser().parseFromString(normalized, 'application/xml');
