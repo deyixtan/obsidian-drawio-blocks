@@ -213,8 +213,14 @@ await disconnectedRuntime.checkForLocalEditorUpdates().then(
 if (globalThis.__drawioUpdateRequestCount !== 0) {
 	throw new Error('Offline update check made a network request.');
 }
-if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
-else Reflect.deleteProperty(globalThis, 'navigator');
+if (navigatorDescriptor) {
+	Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+} else {
+	Object.defineProperty(globalThis, 'navigator', {
+		configurable: true,
+		value: { onLine: true },
+	});
+}
 
 const runtime = new OfflineEditorRuntime(app, 'plugin');
 const onlineUrl = await runtime.getEditorUrl(params);
