@@ -1,9 +1,9 @@
 {
 	"id": "drawio-blocks",
 	"name": "draw.io Blocks",
-	"version": "1.0.5",
-	"minAppVersion": "1.1.0",
-	"description": "Edit and render draw.io diagrams directly inside Markdown code blocks using the hosted diagrams.net editor.",
+	"version": "2.0.0",
+	"minAppVersion": "1.13.0",
+	"description": "Edit and render draw.io diagrams in Markdown code blocks, online or with an optional local editor.",
 	"author": "Deyi",
 	"authorUrl": "https://github.com/deyixtan",
 	"isDesktopOnly": false

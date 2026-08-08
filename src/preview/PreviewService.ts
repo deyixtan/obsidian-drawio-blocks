@@ -1,3 +1,4 @@
+import type { OfflineEditorRuntime } from '../editor/offline/OfflineEditorRuntime';
 import { normalizeDrawioXml, validateDrawioXml } from '../utils/xml';
 import { PreviewExporter } from './PreviewExporter';
 import { sanitizeSvgDataUri } from './svg';
@@ -7,7 +8,11 @@ export interface PreviewOptions {
 }
 
 export class PreviewService {
-	private readonly exporter = new PreviewExporter();
+	private readonly exporter: PreviewExporter;
+
+	constructor(runtime: OfflineEditorRuntime) {
+		this.exporter = new PreviewExporter(runtime);
+	}
 
 	async render(xml: string, options: PreviewOptions): Promise<string> {
 		const normalized = normalizeDrawioXml(xml);

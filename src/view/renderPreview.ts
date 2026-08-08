@@ -3,6 +3,7 @@ import type { DrawioSource } from '../source/DrawioSource';
 
 export interface PreviewHandle {
 	refresh(): void;
+	updateAppearance(): void;
 	destroy(): void;
 }
 
@@ -33,14 +34,37 @@ export function mountPreview(
 		cls: 'drawio-blocks-preview-image',
 		attr: { alt: source.title() },
 	});
+	const actions = imageWrap.createDiv({ cls: 'drawio-blocks-preview-actions' });
+	const editButton = actions.createEl('button', {
+		cls: 'drawio-blocks-preview-action',
+		text: 'Open in modal',
+		attr: { type: 'button', 'aria-label': `Open ${source.title()} in a modal` },
+	});
+	const tabButton = actions.createEl('button', {
+		cls: 'drawio-blocks-preview-action',
+		text: 'Open in tab',
+		attr: { type: 'button', 'aria-label': `Open ${source.title()} in a new tab` },
+	});
 
 	image.draggable = false;
 
+	const updateAppearance = (): void => {
+		image.style.setProperty('--drawio-blocks-preview-border-color', plugin.previewBorderColor);
+		image.style.setProperty(
+			'--drawio-blocks-preview-grid-color',
+			`${plugin.previewBorderColor}3d`,
+		);
+		image.classList.toggle('has-grid', plugin.showPreviewGrid);
+	};
+
 	const refresh = (): void => {
+		if (destroyed) return;
 		const current = ++generation;
 		status.setText('Rendering diagram…');
 		status.removeClass('is-error');
+		imageWrap.removeClass('has-preview', 'has-error');
 		image.addClass('is-loading');
+		image.addClass('is-unavailable');
 		image.removeAttribute('src');
 
 		void xmlProvider()
@@ -49,58 +73,55 @@ export function mountPreview(
 				if (destroyed || current !== generation) return;
 				image.src = uri;
 				image.removeClass('is-loading');
+				image.removeClass('is-unavailable');
+				imageWrap.addClass('has-preview');
 				status.setText('');
 			})
 			.catch((error: unknown) => {
 				if (destroyed || current !== generation) return;
 				image.removeClass('is-loading');
+				image.addClass('is-unavailable');
+				imageWrap.addClass('has-error');
 				status.addClass('is-error');
 				status.setText(error instanceof Error ? error.message : String(error));
 			});
 	};
 
-	const openEditor = (): void => {
-		imageWrap.blur();
-
+	const openEditor = (inTab: boolean): void => {
 		window.setTimeout(() => {
 			if (!destroyed) {
-				plugin.openEditor(source, refresh);
+				if (inTab) void plugin.openEditorInTab(source, refresh);
+				else plugin.openEditor(source, refresh);
 			}
 		}, 0);
 	};
 
-	const onWrapClick = (event: MouseEvent): void => {
+	const onEditClick = (event: MouseEvent): void => {
 		event.preventDefault();
 		event.stopPropagation();
-		openEditor();
+		openEditor(false);
 	};
 
-	const onWrapKeydown = (event: KeyboardEvent): void => {
-		if (event.target !== imageWrap) return;
-
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			event.stopPropagation();
-			openEditor();
-		}
+	const onTabClick = (event: MouseEvent): void => {
+		event.preventDefault();
+		event.stopPropagation();
+		openEditor(true);
 	};
 
-	imageWrap.addEventListener('click', onWrapClick);
-	imageWrap.addEventListener('keydown', onWrapKeydown);
-	imageWrap.tabIndex = 0;
-	imageWrap.setAttribute('role', 'button');
-	imageWrap.setAttribute('aria-label', `Edit ${source.title()}`);
-	imageWrap.setAttribute('title', 'Edit draw.io diagram');
+	editButton.addEventListener('click', onEditClick);
+	tabButton.addEventListener('click', onTabClick);
 
+	updateAppearance();
 	refresh();
 
 	return {
 		refresh,
+		updateAppearance,
 		destroy: () => {
 			destroyed = true;
 			generation += 1;
-			imageWrap.removeEventListener('click', onWrapClick);
-			imageWrap.removeEventListener('keydown', onWrapKeydown);
+			editButton.removeEventListener('click', onEditClick);
+			tabButton.removeEventListener('click', onTabClick);
 			image.removeAttribute('src');
 			codeBlockHost?.removeClass('drawio-blocks-codeblock-host');
 		},

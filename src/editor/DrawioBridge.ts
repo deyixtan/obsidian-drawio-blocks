@@ -1,15 +1,14 @@
 import { Notice, Platform } from 'obsidian';
-import {
-	DEFAULT_EDITOR_SETTINGS_VERSION,
-	DRAWIO_EDITOR_URL,
-	DRAWIO_ORIGIN,
-	DRAWIO_RESTRICTED_URL_PARAMS,
-} from '../constants';
+import { DEFAULT_EDITOR_SETTINGS_VERSION, DRAWIO_RESTRICTED_URL_PARAMS } from '../constants';
 import type { DrawioSource } from '../source/DrawioSource';
 import { normalizeDrawioXml, validateDrawioXml } from '../utils/xml';
+import { formatDrawioEditorTitle } from './editorTitle';
+import { createEditorFramePolicy, type EditorFramePolicy } from './offline/frameOrigin';
+import type { OfflineEditorRuntime } from './offline/OfflineEditorRuntime';
 
 const AUTOSAVE_WRITE_DELAY_MS = 250;
 const EXIT_SNAPSHOT_TIMEOUT_MS = 5000;
+const EDITOR_INIT_TIMEOUT_MS = 10000;
 
 interface DrawioEvent {
 	event?: string;
@@ -46,11 +45,13 @@ export class DrawioBridge {
 	private ready = false;
 	private errorReported = false;
 	private exitSnapshotPending = false;
+	private editorPolicy: EditorFramePolicy | null = null;
 
 	constructor(
 		private container: HTMLElement,
 		private source: DrawioSource,
 		private dark: boolean,
+		private runtime: OfflineEditorRuntime,
 		private options: DrawioBridgeOptions = {},
 	) {
 		this.hostWindow = container.ownerDocument.defaultView ?? window;
@@ -60,47 +61,62 @@ export class DrawioBridge {
 		this.initialXml = normalizeDrawioXml(await this.source.read());
 		validateDrawioXml(this.initialXml);
 		if (this.destroyed) return;
+		await this.createFrame();
+	}
+
+	private async createFrame(): Promise<void> {
+		this.teardownFrame();
+		if (this.destroyed) return;
+		this.ready = false;
+		const frameSource = await this.runtime.getEditorFrameSource(this.buildParams());
+		if (this.destroyed) return;
+		const editorTitle = formatDrawioEditorTitle(this.runtime.isUsingLocalEditor);
 
 		const iframe = this.container.createEl('iframe', {
 			cls: 'drawio-blocks-editor-frame',
 			attr: {
-				title: this.source.title(),
+				title: editorTitle,
 				sandbox: 'allow-scripts allow-same-origin allow-forms allow-modals',
 				allow: 'clipboard-read; clipboard-write; fullscreen',
 				referrerpolicy: 'no-referrer',
 			},
 		});
 		this.iframe = iframe;
+		this.editorPolicy = createEditorFramePolicy(frameSource.url, frameSource.local);
 
-		iframe.addEventListener('error', () => {
-			this.reportError(
-				new Error('Could not load the diagrams.net editor. Check your network connection.'),
-			);
-		});
+		iframe.addEventListener('error', () =>
+			this.reportError(this.initializationError(frameSource.local)),
+		);
 
 		this.messageHandler = (event) => {
-			if (event.source !== iframe.contentWindow) return;
-			if (event.origin !== DRAWIO_ORIGIN) return;
 			const message = this.parseMessage(event.data);
 			if (!message) return;
+			const handshake = message.event === 'configure' || message.event === 'init';
+			if (!this.editorPolicy?.accepts(event, iframe, handshake)) return;
 			void this.handleMessage(message).catch((error) =>
 				this.reportError(this.asError(error)),
 			);
 		};
 		this.hostWindow.addEventListener('message', this.messageHandler);
-		this.initTimer = this.hostWindow.setTimeout(() => {
-			this.reportError(
-				new Error(
-					'Timed out loading the diagrams.net editor. Check your connection and try again.',
-				),
-			);
-		}, 30000);
+		this.initTimer = this.hostWindow.setTimeout(
+			() => this.reportError(this.initializationError(frameSource.local)),
+			EDITOR_INIT_TIMEOUT_MS,
+		);
 
-		iframe.src = this.buildUrl();
+		if (frameSource.srcdoc !== undefined) iframe.srcdoc = frameSource.srcdoc;
+		else iframe.src = frameSource.url;
 	}
 
-	private buildUrl(): string {
-		const params = new URLSearchParams({
+	private initializationError(local: boolean): Error {
+		return new Error(
+			local
+				? 'The local draw.io editor did not start. Re-download it in plugin settings or switch to online mode.'
+				: 'Could not connect to diagrams.net. Check your network connection or enable the local editor.',
+		);
+	}
+
+	private buildParams(): URLSearchParams {
+		return new URLSearchParams({
 			embed: '1',
 			proto: 'json',
 			configure: '1',
@@ -114,7 +130,6 @@ export class DrawioBridge {
 			...(Platform.isMobileApp ? { touch: '1' } : {}),
 			...DRAWIO_RESTRICTED_URL_PARAMS,
 		});
-		return `${DRAWIO_EDITOR_URL}?${params.toString()}`;
 	}
 
 	private parseMessage(data: unknown): DrawioEvent | null {
@@ -130,7 +145,10 @@ export class DrawioBridge {
 	}
 
 	private post(message: object): void {
-		this.iframe?.contentWindow?.postMessage(JSON.stringify(message), DRAWIO_ORIGIN);
+		this.iframe?.contentWindow?.postMessage(
+			JSON.stringify(message),
+			this.editorPolicy?.targetOrigin ?? '*',
+		);
 	}
 
 	private async handleMessage(message: DrawioEvent): Promise<void> {
@@ -163,7 +181,7 @@ export class DrawioBridge {
 					saveAndExit: 0,
 					noExitBtn: 0,
 					exportProtocol: true,
-					title: this.source.title(),
+					title: formatDrawioEditorTitle(this.runtime.isUsingLocalEditor),
 					dark: this.dark ? 1 : 0,
 				});
 				this.markReady();
@@ -324,6 +342,17 @@ export class DrawioBridge {
 		return error instanceof Error ? error : new Error(String(error));
 	}
 
+	private teardownFrame(): void {
+		if (this.initTimer !== null) this.hostWindow.clearTimeout(this.initTimer);
+		this.initTimer = null;
+		if (this.messageHandler)
+			this.hostWindow.removeEventListener('message', this.messageHandler);
+		this.messageHandler = null;
+		this.iframe?.remove();
+		this.iframe = null;
+		this.editorPolicy = null;
+	}
+
 	destroy(): void {
 		if (this.destroyed) return;
 		this.destroyed = true;
@@ -335,10 +364,6 @@ export class DrawioBridge {
 		this.exitSnapshotTimer = null;
 		this.exitSnapshotPending = false;
 		void this.flushSaves().catch(() => undefined);
-		if (this.messageHandler)
-			this.hostWindow.removeEventListener('message', this.messageHandler);
-		this.messageHandler = null;
-		this.iframe?.remove();
-		this.iframe = null;
+		this.teardownFrame();
 	}
 }

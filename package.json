@@ -1,12 +1,12 @@
 {
 	"name": "drawio-blocks",
-	"version": "1.0.5",
-	"description": "Edit and render draw.io diagrams directly inside Markdown code blocks using the hosted diagrams.net editor.",
+	"version": "2.0.0",
+	"description": "Edit and render draw.io diagrams inside Markdown code blocks, online or with an optional local editor.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node scripts/verify-build.mjs && node scripts/verify-frame-policy.mjs && node scripts/verify-preview-timeout.mjs && node scripts/verify-ui.mjs && node scripts/verify-offline-runtime.mjs",
 		"lint": "eslint .",
 		"format": "prettier . --write",
 		"format:check": "prettier . --check",
@@ -26,6 +26,9 @@
 		"trailingComma": "all",
 		"useTabs": true
 	},
+	"dependencies": {
+		"fflate": "0.8.2"
+	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",
@@ -38,5 +41,8 @@
 		"prettier": "3.9.6",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.59.1"
+	},
+	"allowScripts": {
+		"esbuild@0.25.5": true
 	}
 }

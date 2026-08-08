@@ -1,13 +1,12 @@
-import {
-	DRAWIO_EDITOR_URL,
-	DRAWIO_ORIGIN,
-	DRAWIO_RESTRICTED_URL_PARAMS,
-	EMPTY_DRAWIO_XML,
-} from '../constants';
+import { DRAWIO_RESTRICTED_URL_PARAMS, EMPTY_DRAWIO_XML } from '../constants';
+import { createEditorFramePolicy, type EditorFramePolicy } from '../editor/offline/frameOrigin';
+import type { OfflineEditorRuntime } from '../editor/offline/OfflineEditorRuntime';
 
 interface ExportRequest {
 	xml: string;
 	dark: boolean;
+	local: boolean;
+	deadlineTimer: number | null;
 	resolve: (value: string) => void;
 	reject: (error: Error) => void;
 }
@@ -16,6 +15,10 @@ interface DrawioMessage {
 	data?: string;
 	error?: string;
 }
+
+const RENDERER_INIT_TIMEOUT_MS = 10000;
+const EXPORT_TIMEOUT_MS = 10000;
+const REQUEST_DEADLINE_MS = 15000;
 
 export class PreviewExporter {
 	private container: HTMLElement | null = null;
@@ -29,11 +32,27 @@ export class PreviewExporter {
 	private initTimer: number | null = null;
 	private currentDark: boolean | null = null;
 	private destroyed = false;
+	private iframeCreation: Promise<void> | null = null;
+	private editorPolicy: EditorFramePolicy | null = null;
+
+	constructor(private runtime: OfflineEditorRuntime) {}
 
 	exportSvg(xml: string, dark: boolean): Promise<string> {
 		if (this.destroyed) return Promise.reject(new Error('Preview exporter is unavailable.'));
 		return new Promise((resolve, reject) => {
-			this.queue.push({ xml, dark, resolve, reject });
+			const request: ExportRequest = {
+				xml,
+				dark,
+				local: this.runtime.isUsingLocalEditor,
+				deadlineTimer: null,
+				resolve,
+				reject,
+			};
+			request.deadlineTimer = this.win.setTimeout(
+				() => this.timeoutRequest(request),
+				REQUEST_DEADLINE_MS,
+			);
+			this.queue.push(request);
 			this.process();
 		});
 	}
@@ -43,7 +62,7 @@ export class PreviewExporter {
 		const next = this.queue[0];
 		if (!next) return;
 		if (!this.iframe || this.currentDark !== next.dark) {
-			this.createIframe(next.dark);
+			this.startIframe(next.dark);
 			return;
 		}
 		if (!this.ready) return;
@@ -67,18 +86,27 @@ export class PreviewExporter {
 		});
 		this.timer = this.win.setTimeout(
 			() => this.failActive(new Error('Timed out generating the draw.io preview.')),
-			30000,
+			EXPORT_TIMEOUT_MS,
 		);
 	}
 
-	private createIframe(dark: boolean): void {
+	private startIframe(dark: boolean): void {
+		if (this.iframeCreation) return;
+
+		this.iframeCreation = this.createIframe(dark)
+			.catch((error: unknown) =>
+				this.failInitialization(error instanceof Error ? error : new Error(String(error))),
+			)
+			.finally(() => {
+				this.iframeCreation = null;
+			});
+	}
+
+	private async createIframe(dark: boolean): Promise<void> {
 		this.teardownIframe();
 		if (this.destroyed) return;
 		this.currentDark = dark;
 		this.ready = false;
-		const doc = document;
-		this.win = doc.defaultView ?? window;
-		this.container = doc.body.createDiv({ cls: 'drawio-blocks-exporter' });
 		const params = new URLSearchParams({
 			embed: '1',
 			proto: 'json',
@@ -89,6 +117,13 @@ export class PreviewExporter {
 			spin: '0',
 			...DRAWIO_RESTRICTED_URL_PARAMS,
 		});
+		const frameSource = await this.runtime.getEditorFrameSource(params);
+		if (this.destroyed || this.currentDark !== dark) return;
+		this.editorPolicy = createEditorFramePolicy(frameSource.url, frameSource.local);
+
+		const doc = document;
+		this.win = doc.defaultView ?? window;
+		this.container = doc.body.createDiv({ cls: 'drawio-blocks-exporter' });
 		this.iframe = this.container.createEl('iframe', {
 			attr: {
 				title: 'draw.io preview renderer',
@@ -96,21 +131,18 @@ export class PreviewExporter {
 				referrerpolicy: 'no-referrer',
 			},
 		});
-		this.iframe.addEventListener('error', () => {
-			this.failInitialization(new Error('Could not load the diagrams.net preview renderer.'));
-		});
+		this.iframe.addEventListener('error', () =>
+			this.failInitialization(this.initializationError(frameSource.local)),
+		);
 		this.initTimer = this.win.setTimeout(
-			() =>
-				this.failInitialization(
-					new Error('Timed out loading the diagrams.net preview renderer.'),
-				),
-			30000,
+			() => this.failInitialization(this.initializationError(frameSource.local)),
+			RENDERER_INIT_TIMEOUT_MS,
 		);
 		this.handler = (event) => {
-			if (event.source !== this.iframe?.contentWindow || event.origin !== DRAWIO_ORIGIN)
-				return;
 			const message = this.parse(event.data);
 			if (!message) return;
+			const handshake = message.event === 'configure' || message.event === 'init';
+			if (!this.editorPolicy?.accepts(event, this.iframe, handshake)) return;
 			if (message.event === 'configure') {
 				this.post({
 					action: 'configure',
@@ -143,7 +175,16 @@ export class PreviewExporter {
 			}
 		};
 		this.win.addEventListener('message', this.handler);
-		this.iframe.src = `${DRAWIO_EDITOR_URL}?${params.toString()}`;
+		if (frameSource.srcdoc !== undefined) this.iframe.srcdoc = frameSource.srcdoc;
+		else this.iframe.src = frameSource.url;
+	}
+
+	private initializationError(local: boolean): Error {
+		return new Error(
+			local
+				? 'The local draw.io preview renderer did not start. Re-download it in plugin settings or switch to online mode.'
+				: 'Could not connect to diagrams.net. Check your network connection or enable the local editor.',
+		);
 	}
 
 	private parse(data: unknown): DrawioMessage | null {
@@ -159,7 +200,44 @@ export class PreviewExporter {
 	}
 
 	private post(message: object): void {
-		this.iframe?.contentWindow?.postMessage(JSON.stringify(message), DRAWIO_ORIGIN);
+		this.iframe?.contentWindow?.postMessage(
+			JSON.stringify(message),
+			this.editorPolicy?.targetOrigin ?? '*',
+		);
+	}
+
+	private clearRequestDeadline(request: ExportRequest): void {
+		if (request.deadlineTimer !== null) this.win.clearTimeout(request.deadlineTimer);
+		request.deadlineTimer = null;
+	}
+
+	private timeoutRequest(request: ExportRequest): void {
+		if (this.destroyed) return;
+		this.clearRequestDeadline(request);
+		const error = new Error(
+			request.local
+				? 'Timed out rendering with the local draw.io editor. Re-download it or switch to online mode.'
+				: 'Could not connect to diagrams.net. Check your network connection or enable the local editor.',
+		);
+
+		if (this.active === request) {
+			this.active = null;
+			this.teardownIframe();
+			this.currentDark = null;
+			request.reject(error);
+			this.process();
+			return;
+		}
+
+		const index = this.queue.indexOf(request);
+		if (index < 0) return;
+		this.queue.splice(index, 1);
+		if (index === 0) {
+			this.teardownIframe();
+			this.currentDark = null;
+		}
+		request.reject(error);
+		this.process();
 	}
 
 	private finishActive(data: string): void {
@@ -167,6 +245,7 @@ export class PreviewExporter {
 		this.timer = null;
 		const active = this.active;
 		this.active = null;
+		if (active) this.clearRequestDeadline(active);
 		active?.resolve(data);
 		this.process();
 	}
@@ -177,6 +256,7 @@ export class PreviewExporter {
 
 		const active = this.active;
 		this.active = null;
+		if (active) this.clearRequestDeadline(active);
 		active?.reject(error);
 
 		// A timed-out export can still reply later. Recreate the worker before
@@ -190,11 +270,15 @@ export class PreviewExporter {
 		if (this.destroyed) return;
 		const active = this.active;
 		this.active = null;
+		if (active) this.clearRequestDeadline(active);
 		active?.reject(error);
 		const pending = this.queue.splice(0);
 		this.teardownIframe();
 		this.currentDark = null;
-		for (const request of pending) request.reject(error);
+		for (const request of pending) {
+			this.clearRequestDeadline(request);
+			request.reject(error);
+		}
 	}
 
 	private teardownIframe(): void {
@@ -209,15 +293,19 @@ export class PreviewExporter {
 		this.iframe = null;
 		this.container = null;
 		this.ready = false;
+		this.editorPolicy = null;
 	}
 
 	destroy(): void {
 		if (this.destroyed) return;
 		this.destroyed = true;
 		this.teardownIframe();
+		if (this.active) this.clearRequestDeadline(this.active);
 		this.active?.reject(new Error('Preview exporter stopped.'));
 		this.active = null;
-		for (const request of this.queue.splice(0))
+		for (const request of this.queue.splice(0)) {
+			this.clearRequestDeadline(request);
 			request.reject(new Error('Preview exporter stopped.'));
+		}
 	}
 }

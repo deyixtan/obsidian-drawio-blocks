@@ -1,6 +1,7 @@
 import { App, Modal } from 'obsidian';
 import type { DrawioSource } from '../source/DrawioSource';
 import { DrawioBridge } from './DrawioBridge';
+import type { OfflineEditorRuntime } from './offline/OfflineEditorRuntime';
 
 export class DrawioModal extends Modal {
 	private bridge: DrawioBridge | null = null;
@@ -10,6 +11,7 @@ export class DrawioModal extends Modal {
 		app: App,
 		private source: DrawioSource,
 		private dark: boolean,
+		private runtime: OfflineEditorRuntime,
 		private editorSettingsVersion: string,
 		private compressXml: boolean,
 		private onSaved?: (xml: string) => void,
@@ -37,7 +39,7 @@ export class DrawioModal extends Modal {
 			text: 'Loading diagrams.net…',
 		});
 
-		this.bridge = new DrawioBridge(this.shell, this.source, this.dark, {
+		this.bridge = new DrawioBridge(this.shell, this.source, this.dark, this.runtime, {
 			settingsVersion: this.editorSettingsVersion,
 			compressXml: this.compressXml,
 			onExit: () => this.close(),

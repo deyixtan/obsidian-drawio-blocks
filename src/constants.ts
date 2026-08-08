@@ -1,6 +1,7 @@
 export const DRAWIO_ORIGIN = 'https://embed.diagrams.net';
 export const DRAWIO_EDITOR_URL = `${DRAWIO_ORIGIN}/`;
 export const DEFAULT_EDITOR_SETTINGS_VERSION = '1';
+export const DEFAULT_PREVIEW_BORDER_COLOR = '#808080';
 
 export const DRAWIO_RESTRICTED_URL_PARAMS: Readonly<Record<string, string>> = {
 	plugins: '0',

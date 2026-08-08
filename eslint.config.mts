@@ -5,6 +5,7 @@ import { globalIgnores, defineConfig } from 'eslint/config';
 export default defineConfig(
 	globalIgnores([
 		'node_modules',
+		'.cache',
 		'dist',
 		'esbuild.config.mjs',
 		'version-bump.mjs',
@@ -21,7 +22,7 @@ export default defineConfig(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json'],
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs'],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],
@@ -29,4 +30,18 @@ export default defineConfig(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		files: ['scripts/*.mjs'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			'no-restricted-globals': 'off',
+			'no-unsanitized/method': 'off',
+			'obsidianmd/no-global-this': 'off',
+			'obsidianmd/no-nodejs-modules': 'off',
+		},
+	},
 );
