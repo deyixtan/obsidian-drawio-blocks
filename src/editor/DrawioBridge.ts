@@ -126,7 +126,7 @@ export class DrawioBridge {
 			noSaveBtn: '1',
 			saveAndExit: '0',
 			noExitBtn: '0',
-			dark: this.dark ? '1' : '0',
+			dark: 'auto',
 			...(Platform.isMobileApp ? { touch: '1' } : {}),
 			...DRAWIO_RESTRICTED_URL_PARAMS,
 		});

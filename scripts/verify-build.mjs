@@ -40,11 +40,11 @@ for (const requiredValue of [
 }
 
 if (
-	manifest.version !== '2.0.2' ||
+	manifest.version !== '2.0.3' ||
 	manifest.minAppVersion !== '1.13.0' ||
-	versions['2.0.2'] !== '1.13.0'
+	versions['2.0.3'] !== '1.13.0'
 ) {
-	throw new Error('Plugin 2.0.2 version metadata is inconsistent.');
+	throw new Error('Plugin 2.0.3 version metadata is inconsistent.');
 }
 
 new Script(source, { filename: 'main.js' });

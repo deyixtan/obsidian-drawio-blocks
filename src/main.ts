@@ -197,11 +197,21 @@ export default class DrawioBlocksPlugin extends Plugin {
 	}
 
 	isDark(): boolean {
-		return (
+		if (
 			document.body.classList.contains('theme-dark') ||
-			document.documentElement.classList.contains('theme-dark') ||
-			window.matchMedia?.('(prefers-color-scheme: dark)').matches === true
-		);
+			document.documentElement.classList.contains('theme-dark')
+		) {
+			return true;
+		}
+
+		if (
+			document.body.classList.contains('theme-light') ||
+			document.documentElement.classList.contains('theme-light')
+		) {
+			return false;
+		}
+
+		return window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
 	}
 
 	private insertDrawioCodeBlock(): void {

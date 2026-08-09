@@ -289,6 +289,14 @@
 	border: 0;
 }
 
+.theme-light .drawio-blocks-editor-frame {
+	color-scheme: light;
+}
+
+.theme-dark .drawio-blocks-editor-frame {
+	color-scheme: dark;
+}
+
 .drawio-blocks-error {
 	display: flex;
 	flex-direction: column;

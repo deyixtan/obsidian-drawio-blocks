@@ -1,6 +1,6 @@
 {
 	"name": "drawio-blocks",
-	"version": "2.0.2",
+	"version": "2.0.3",
 	"description": "Edit and render draw.io diagrams inside Markdown code blocks, online or with an optional local editor.",
 	"main": "main.js",
 	"type": "module",
