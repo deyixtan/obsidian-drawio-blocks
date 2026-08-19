@@ -44,8 +44,8 @@
 	margin: -1px;
 	overflow: hidden;
 	white-space: nowrap;
+	opacity: 0;
 	border: 0;
-	clip-path: inset(50%);
 }
 
 .markdown-rendered .drawio-blocks-preview-card .drawio-blocks-image-wrap,
@@ -282,10 +282,10 @@
 	overflow: hidden;
 }
 
-body:has(.drawio-blocks-modal) .modal-header,
-body:has(.drawio-blocks-modal) .modal-header-button,
-body:has(.drawio-blocks-viewer-modal) .modal-header,
-body:has(.drawio-blocks-viewer-modal) .modal-header-button {
+body.drawio-blocks-editor-modal-open .modal-header,
+body.drawio-blocks-editor-modal-open .modal-header-button,
+body.drawio-blocks-viewer-modal-open .modal-header,
+body.drawio-blocks-viewer-modal-open .modal-header-button {
 	display: none;
 }
 

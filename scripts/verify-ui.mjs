@@ -107,6 +107,22 @@ if (!viewerModal.includes('DrawioViewer') || !viewerModal.includes('viewer.mount
 if (!viewerModal.includes('() =>') || !viewerModal.includes('this.close()')) {
 	throw new Error('The viewer toolbar close button does not close its modal.');
 }
+for (const value of [
+	"body.addClass('drawio-blocks-viewer-modal-open')",
+	"body.removeClass('drawio-blocks-viewer-modal-open')",
+]) {
+	if (!viewerModal.includes(value)) {
+		throw new Error(`The viewer modal does not manage its body state class: ${value}.`);
+	}
+}
+for (const value of [
+	"body.addClass('drawio-blocks-editor-modal-open')",
+	"body.removeClass('drawio-blocks-editor-modal-open')",
+]) {
+	if (!editorModal.includes(value)) {
+		throw new Error(`The editor modal does not manage its body state class: ${value}.`);
+	}
+}
 if (!viewerView.includes('DRAWIO_VIEWER_VIEW_TYPE') || !viewerView.includes('DrawioViewer')) {
 	throw new Error('The viewer tab does not mount the shared diagram viewer.');
 }
@@ -166,6 +182,9 @@ if (styles.includes('!important')) {
 if (styles.includes('@media (hover: none), (pointer: coarse)')) {
 	throw new Error('Touch devices still force the preview actions to remain visible.');
 }
+for (const value of [':has(', 'clip-path']) {
+	if (styles.includes(value)) throw new Error(`Plugin styling still includes ${value}.`);
+}
 for (const value of [
 	'drawio-blocks-preview-actions',
 	'is-unavailable',
@@ -183,10 +202,10 @@ for (const value of [
 	'object-fit: contain',
 	"[data-type='drawio-blocks-editor']",
 	'drawio-blocks-viewer-modal',
-	'body:has(.drawio-blocks-modal) .modal-header',
-	'body:has(.drawio-blocks-modal) .modal-header-button',
-	'body:has(.drawio-blocks-viewer-modal) .modal-header',
-	'body:has(.drawio-blocks-viewer-modal) .modal-header-button',
+	'body.drawio-blocks-editor-modal-open .modal-header',
+	'body.drawio-blocks-editor-modal-open .modal-header-button',
+	'body.drawio-blocks-viewer-modal-open .modal-header',
+	'body.drawio-blocks-viewer-modal-open .modal-header-button',
 	'drawio-blocks-viewer-close',
 	'drawio-blocks-viewer-viewport',
 	'drawio-blocks-save-image-modal',
@@ -196,6 +215,7 @@ for (const value of [
 	'drawio-blocks-preview-card:not(.is-empty)',
 	'padding-block: var(--drawio-blocks-preview-spacing)',
 	'drawio-blocks-visually-hidden',
+	'opacity: 0',
 	'grid-template-columns: minmax(0, 1fr) auto',
 	'var(--safe-area-inset-top,',
 	'env(safe-area-inset-top, 0px)',

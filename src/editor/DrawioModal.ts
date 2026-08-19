@@ -20,6 +20,7 @@ export class DrawioModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.ownerDocument.body.addClass('drawio-blocks-editor-modal-open');
 		this.modalEl.addClass('drawio-blocks-modal');
 		this.contentEl.addClass('drawio-blocks-modal-content');
 		this.contentEl.empty();
@@ -74,6 +75,7 @@ export class DrawioModal extends Modal {
 	}
 
 	onClose(): void {
+		this.modalEl.ownerDocument.body.removeClass('drawio-blocks-editor-modal-open');
 		this.bridge?.destroy();
 		this.bridge = null;
 		this.shell = null;

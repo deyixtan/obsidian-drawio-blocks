@@ -13,6 +13,7 @@ export class DrawioViewerModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.ownerDocument.body.addClass('drawio-blocks-viewer-modal-open');
 		this.modalEl.addClass('drawio-blocks-viewer-modal');
 		this.modalEl.setAttribute('aria-label', `View ${this.title}`);
 		this.contentEl.addClass('drawio-blocks-viewer-content');
@@ -23,6 +24,7 @@ export class DrawioViewerModal extends Modal {
 	}
 
 	onClose(): void {
+		this.modalEl.ownerDocument.body.removeClass('drawio-blocks-viewer-modal-open');
 		this.viewer?.destroy();
 		this.viewer = null;
 		this.contentEl.empty();
