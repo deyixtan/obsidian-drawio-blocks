@@ -4,6 +4,8 @@ Edit and render draw.io diagrams directly inside Markdown code blocks using eith
 
 Supports desktop and mobile.
 
+![demo gif](docs/demo.gif)
+
 ## Features
 
 - Renders `drawio` code blocks as SVG previews
