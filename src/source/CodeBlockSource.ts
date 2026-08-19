@@ -29,6 +29,15 @@ export class CodeBlockSource implements DrawioSource {
 		return this.lastBody;
 	}
 
+	suggestedImagePath(extension: string): string {
+		const sourcePath = this.context.sourcePath;
+		const separator = sourcePath.lastIndexOf('/');
+		const directory = separator >= 0 ? sourcePath.slice(0, separator + 1) : '';
+		const filename = sourcePath.slice(separator + 1);
+		const basename = filename.replace(/\.[^.]+$/, '') || 'drawio';
+		return `${directory}${basename}-diagram.${extension}`;
+	}
+
 	async read(): Promise<string> {
 		const file = this.getSourceFile();
 		const current = await this.app.vault.read(file);

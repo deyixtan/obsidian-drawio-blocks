@@ -2,7 +2,17 @@ import { Notice, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 import { DEFAULT_PREVIEW_BORDER_COLOR } from '../constants';
 import type DrawioBlocksPlugin from '../main';
 
-type DrawioSettingKey = 'compressXml' | 'previewBorderColor' | 'showPreviewGrid';
+type DrawioSettingKey =
+	| 'compressXml'
+	| 'defaultEditDestination'
+	| 'defaultViewDestination'
+	| 'previewBorderColor'
+	| 'showPreviewGrid';
+
+const PREVIEW_DESTINATIONS = {
+	modal: 'Open in modal',
+	tab: 'Open in tab',
+};
 
 export class DrawioBlocksSettingTab extends PluginSettingTab {
 	constructor(private plugin: DrawioBlocksPlugin) {
@@ -23,7 +33,7 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 				heading: 'Offline mode',
 				items: [
 					{
-						name: 'Local editor',
+						name: 'Switch to local editor',
 						desc: `Version: ${displayedVersion}`,
 						aliases: [
 							'download offline editor',
@@ -37,20 +47,6 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 								return;
 							}
 
-							if (
-								this.plugin.localEditorDownloaded &&
-								this.plugin.localEditorUpdateAvailable
-							) {
-								setting.addButton((button) =>
-									button
-										.setButtonText('Update')
-										.setTooltip(
-											`Update to draw.io ${this.plugin.localEditorVersion}`,
-										)
-										.onClick(() => this.updateLocalEditor()),
-								);
-							}
-
 							setting.addToggle((toggle) =>
 								toggle
 									.setValue(this.plugin.useLocalEditor)
@@ -61,6 +57,32 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 									)
 									.onChange((value) => this.setOfflineMode(value)),
 							);
+						},
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Preview actions',
+				items: [
+					{
+						name: 'View button',
+						aliases: ['default view', 'view modal', 'view tab'],
+						control: {
+							type: 'dropdown',
+							key: 'defaultViewDestination',
+							defaultValue: 'modal',
+							options: PREVIEW_DESTINATIONS,
+						},
+					},
+					{
+						name: 'Edit button',
+						aliases: ['default edit', 'edit modal', 'edit tab'],
+						control: {
+							type: 'dropdown',
+							key: 'defaultEditDestination',
+							defaultValue: 'modal',
+							options: PREVIEW_DESTINATIONS,
 						},
 					},
 				],
@@ -105,6 +127,8 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 	}
 
 	getControlValue(key: string): unknown {
+		if (key === 'defaultViewDestination') return this.plugin.defaultViewDestination;
+		if (key === 'defaultEditDestination') return this.plugin.defaultEditDestination;
 		if (key === 'previewBorderColor') return this.plugin.previewBorderColor;
 		if (key === 'showPreviewGrid') return this.plugin.showPreviewGrid;
 		if (key === 'compressXml') return this.plugin.compressXml;
@@ -112,6 +136,18 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === 'defaultViewDestination' || key === 'defaultEditDestination') {
+			if (value !== 'modal' && value !== 'tab') {
+				throw new Error(`Invalid value for ${key}.`);
+			}
+
+			if (key === 'defaultViewDestination') this.plugin.defaultViewDestination = value;
+			else this.plugin.defaultEditDestination = value;
+			await this.plugin.savePluginData();
+			this.plugin.refreshPreviewAppearance();
+			return;
+		}
+
 		if (key === 'previewBorderColor') {
 			if (typeof value !== 'string' || !/^#[\da-f]{6}$/i.test(value)) {
 				throw new Error('Preview border color must be a six-digit hex color.');
@@ -162,20 +198,6 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 					value
 						? `draw.io Blocks: Offline mode enabled with draw.io ${this.plugin.localEditorInstalledVersion ?? this.plugin.localEditorVersion}.`
 						: 'draw.io Blocks: Offline mode disabled and the local editor was removed.',
-				);
-			},
-			(error: unknown) => {
-				this.update();
-				this.showError(error);
-			},
-		);
-	}
-
-	private updateLocalEditor(): void {
-		void this.plugin.downloadLocalEditor().then(
-			() => {
-				new Notice(
-					`draw.io Blocks: Local editor updated to ${this.plugin.localEditorVersion}.`,
 				);
 			},
 			(error: unknown) => {

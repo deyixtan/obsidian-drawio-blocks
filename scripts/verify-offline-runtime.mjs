@@ -49,7 +49,6 @@ if (archiveArgumentIndex >= 0) {
 	testConfig = {
 		version: '9.9.9',
 		releaseUrl: 'https://example.test/draw.war',
-		latestReleaseUrl: 'https://api.example.test/releases/latest',
 		sha256: archiveHash,
 		bundleRevision: 7,
 		minimumFileCount: 8,
@@ -77,11 +76,7 @@ const compilation = await esbuild.build({
 				build.onLoad({ filter: /.*/, namespace: 'offline-runtime-verifier' }, () => ({
 					contents: `
 						export const normalizePath = (value) => value.replaceAll('\\\\', '/').replace(/\\/{2,}/g, '/').replace(/^\\.\\//, '').replace(/\\/$/, '');
-						export const requestUrl = async (request) => {
-							if (request.url === globalThis.__drawioLatestReleaseUrl) {
-								globalThis.__drawioUpdateRequestCount += 1;
-								return { status: globalThis.__drawioUpdateStatus, json: { tag_name: globalThis.__drawioLatestTag } };
-							}
+						export const requestUrl = async () => {
 							globalThis.__drawioRequestCount += 1;
 							return { status: globalThis.__drawioStatus, arrayBuffer: globalThis.__drawioArchive };
 						};
@@ -112,12 +107,8 @@ if (typeof OfflineEditorRuntime !== 'function') {
 globalThis.crypto ??= webcrypto;
 globalThis.window ??= globalThis;
 globalThis.__drawioArchive = exactArrayBuffer(archive);
-globalThis.__drawioLatestReleaseUrl = testConfig.latestReleaseUrl;
-globalThis.__drawioLatestTag = archiveArgumentIndex >= 0 ? `v${testConfig.version}` : 'v9.9.10';
 globalThis.__drawioRequestCount = 0;
 globalThis.__drawioStatus = 200;
-globalThis.__drawioUpdateRequestCount = 0;
-globalThis.__drawioUpdateStatus = 200;
 
 const files = new Set([
 	'plugin',
@@ -200,19 +191,6 @@ await disconnectedRuntime.getEditorUrl(params).then(
 		}
 	},
 );
-await disconnectedRuntime.checkForLocalEditorUpdates().then(
-	() => {
-		throw new Error('Update check ran while the browser reported no network.');
-	},
-	(error) => {
-		if (!(error instanceof Error) || !error.message.includes('No network connection')) {
-			throw error;
-		}
-	},
-);
-if (globalThis.__drawioUpdateRequestCount !== 0) {
-	throw new Error('Offline update check made a network request.');
-}
 if (navigatorDescriptor) {
 	Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
 } else {
@@ -295,19 +273,11 @@ if (!(await runtime.hasLocalEditorInstallation())) {
 	throw new Error('An older verified local editor was not recognized as available.');
 }
 if ((await runtime.getEditorUrl(params)) !== localUrl) {
-	throw new Error('An older verified local editor could not remain active before updating.');
+	throw new Error('An older verified local editor could not remain active.');
 }
 await adapter.write(markerPath, currentMarker);
-
-const updateInfo = await runtime.checkForLocalEditorUpdates();
-if (globalThis.__drawioUpdateRequestCount !== 1) {
-	throw new Error('The local editor update check did not make exactly one explicit request.');
-}
-if (updateInfo.installedVersion !== testConfig.version || !updateInfo.installedIsCurrent) {
-	throw new Error('The update check did not report the installed local editor version.');
-}
-if (updateInfo.upstreamUpdateAvailable !== archiveArgumentIndex < 0) {
-	throw new Error('The update check compared draw.io versions incorrectly.');
+if ('checkForLocalEditorUpdates' in runtime) {
+	throw new Error('The local editor runtime still exposes an independent update check.');
 }
 
 const preConfig = strFromU8(binaryFiles.get(`${installationRoot}/js/PreConfig.js`));
@@ -380,5 +350,5 @@ await runtime.getEditorUrl(params).then(
 );
 
 process.stdout.write(
-	`Verified ${fixtureName}: ${installedBinaryCount} flat local files, SHA-256 check, compatible update state, extraction, removal, and online toggle\n`,
+	`Verified ${fixtureName}: ${installedBinaryCount} flat local files, SHA-256 check, pinned-version state, extraction, removal, and online toggle\n`,
 );

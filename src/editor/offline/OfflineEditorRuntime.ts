@@ -16,14 +16,6 @@ export interface EditorFrameSource {
 	url: string;
 }
 
-export interface LocalEditorUpdateInfo {
-	bundledVersion: string;
-	installedIsCurrent: boolean;
-	installedVersion: string | null;
-	latestVersion: string;
-	upstreamUpdateAvailable: boolean;
-}
-
 function expectedInstallationId(): string {
 	return `${drawioConfig.version}-${drawioConfig.bundleRevision}-${drawioConfig.sha256.slice(0, 16)}`;
 }
@@ -125,19 +117,6 @@ async function sha256(data: Uint8Array): Promise<string> {
 
 function asError(error: unknown): Error {
 	return error instanceof Error ? error : new Error(String(error));
-}
-
-export function compareDrawioVersions(left: string, right: string): number {
-	const leftParts = left.split('.').map(Number);
-	const rightParts = right.split('.').map(Number);
-	const length = Math.max(leftParts.length, rightParts.length);
-
-	for (let index = 0; index < length; index += 1) {
-		const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-		if (difference !== 0) return difference;
-	}
-
-	return 0;
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -279,45 +258,6 @@ export class OfflineEditorRuntime {
 		} catch {
 			return null;
 		}
-	}
-
-	async checkForLocalEditorUpdates(): Promise<LocalEditorUpdateInfo> {
-		if (this.destroyed) throw new Error('The draw.io editor runtime has stopped.');
-		if (window.navigator.onLine === false) {
-			throw new Error('No network connection. Reconnect before checking for updates.');
-		}
-
-		const response = await requestUrl({
-			url: drawioConfig.latestReleaseUrl,
-			method: 'GET',
-			headers: { Accept: 'application/vnd.github+json' },
-			throw: false,
-		});
-
-		if (response.status < 200 || response.status >= 300) {
-			throw new Error(`Update check returned HTTP ${response.status}.`);
-		}
-
-		const payload: unknown = response.json;
-		const tagName =
-			payload !== null && typeof payload === 'object' && 'tag_name' in payload
-				? (payload as { tag_name?: unknown }).tag_name
-				: null;
-
-		if (typeof tagName !== 'string' || !/^v?\d+\.\d+\.\d+$/.test(tagName)) {
-			throw new Error('GitHub returned an invalid draw.io release version.');
-		}
-
-		const latestVersion = tagName.replace(/^v/, '');
-		const installedVersion = await this.getInstalledLocalEditorVersion();
-
-		return {
-			bundledVersion: drawioConfig.version,
-			installedIsCurrent: await this.isLocalEditorInstalled(),
-			installedVersion,
-			latestVersion,
-			upstreamUpdateAvailable: compareDrawioVersions(latestVersion, drawioConfig.version) > 0,
-		};
 	}
 
 	downloadLocalEditor(onPhase?: (phase: LocalEditorInstallPhase) => void): Promise<void> {

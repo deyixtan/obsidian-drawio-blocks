@@ -1,7 +1,6 @@
 {
 	"version": "31.1.8",
 	"releaseUrl": "https://github.com/jgraph/drawio/releases/download/v31.1.8/draw.war",
-	"latestReleaseUrl": "https://api.github.com/repos/jgraph/drawio/releases/latest",
 	"sha256": "46389bd60810f9775cd463c9eff4f4f8335f10926d613b0606ad4e978f46d49b",
 	"bundleRevision": 3,
 	"minimumFileCount": 3000

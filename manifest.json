@@ -1,7 +1,7 @@
 {
 	"id": "drawio-blocks",
 	"name": "draw.io Blocks",
-	"version": "2.0.3",
+	"version": "2.1.0",
 	"minAppVersion": "1.13.0",
 	"description": "Edit and render draw.io diagrams in Markdown code blocks, online or with an optional local editor.",
 	"author": "Deyi",

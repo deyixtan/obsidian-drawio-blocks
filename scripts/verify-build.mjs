@@ -23,13 +23,23 @@ if (source.includes('__DRAWIO_OFFLINE_ARCHIVE')) {
 for (const requiredValue of [
 	'https://embed.diagrams.net',
 	drawioConfig.releaseUrl,
-	drawioConfig.latestReleaseUrl,
 	drawioConfig.sha256,
 	'Offline mode',
+	'Switch to local editor',
+	'Preview actions',
+	'View button',
+	'Edit button',
 	'Preview border color',
 	'Show preview grid',
-	'Open in modal',
-	'Open in tab',
+	'View in modal',
+	'View in tab',
+	'Edit in modal',
+	'Edit in tab',
+	'Copy image',
+	'Copy XML',
+	'Save image',
+	'Zoom in',
+	'Zoom out',
 	'Offline Editor',
 	'Online Editor',
 	'Apache License',
@@ -39,12 +49,21 @@ for (const requiredValue of [
 	}
 }
 
+for (const removedValue of [
+	'https://api.github.com/repos/jgraph/drawio/releases/latest',
+	'Update to draw.io',
+]) {
+	if (source.includes(removedValue)) {
+		throw new Error(`main.js still contains removed editor update data: ${removedValue}`);
+	}
+}
+
 if (
-	manifest.version !== '2.0.3' ||
+	manifest.version !== '2.1.0' ||
 	manifest.minAppVersion !== '1.13.0' ||
-	versions['2.0.3'] !== '1.13.0'
+	versions['2.1.0'] !== '1.13.0'
 ) {
-	throw new Error('Plugin 2.0.3 version metadata is inconsistent.');
+	throw new Error('Plugin 2.1.0 version metadata is inconsistent.');
 }
 
 new Script(source, { filename: 'main.js' });

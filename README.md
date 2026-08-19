@@ -7,7 +7,8 @@ Supports desktop and mobile.
 ## Features
 
 - Renders `drawio` code blocks as SVG previews
-- Opens an editor in a modal or a new tab
+- Opens a read-only diagram viewer in a modal or new tab, with controls for zooming and panning
+- Opens the diagram editor in a modal or new tab
 - Autosaves changes to the original Markdown block
 - Supports Obsidian light and dark themes
 - Supports online and offline editing
@@ -42,15 +43,21 @@ Run **Insert inline draw.io diagram** from the command palette, or create an emp
 ```
 ````
 
-Hover over the rendered preview and select **Open in modal** or **Open in tab**. Changes are saved automatically to the Markdown block.
+Hover over or tap a preview to reveal **View** and **Edit**. Both open in a modal by default, but each can be configured to open in a tab. Editor changes are saved automatically.
+
+In the viewer, drag to pan, use the mouse wheel or **−** and **+** to zoom, and select **Fit** to reset the diagram.
+
+Open the preview context menu by right-clicking on desktop, pressing and holding on mobile, or using the Context Menu key or **Shift+F10**. From the menu, you can view or edit in a modal or tab, copy the image or XML, and save as PNG or JPG.
 
 ## Settings
 
 ### Offline mode
 
-**Local editor** shows the available version. Turn it on to download and enable the offline editor. Turn it off to use the hosted editor and remove the downloaded files.
+**Switch to local editor** displays the draw.io version pinned to the current plugin release. Enable it to download and use the offline editor. Disable it to return to the hosted editor and remove the downloaded files.
 
-When a newer verified editor is included with the plugin, an **Update** button is shown.
+### Preview actions
+
+**View button** and **Edit button** independently choose whether the preview buttons open in a modal or a tab. The explicit modal and tab actions remain available from the preview context menu.
 
 ### Diagram appearance and storage
 

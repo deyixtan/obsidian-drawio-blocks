@@ -19,7 +19,6 @@ import {
 } from './editor/DrawioEditorView';
 import { DrawioModal } from './editor/DrawioModal';
 import {
-	compareDrawioVersions,
 	OfflineEditorRuntime,
 	type LocalEditorInstallPhase,
 } from './editor/offline/OfflineEditorRuntime';
@@ -28,24 +27,35 @@ import { DrawioBlocksSettingTab } from './settings/DrawioBlocksSettingTab';
 import { CodeBlockSource } from './source/CodeBlockSource';
 import type { DrawioSource } from './source/DrawioSource';
 import { formatDrawioXml } from './utils/xml';
+import { DrawioViewerModal } from './view/DrawioViewerModal';
+import {
+	DRAWIO_VIEWER_VIEW_TYPE,
+	DrawioViewerView,
+	type DrawioViewerSession,
+} from './view/DrawioViewerView';
 import { mountPreview, type PreviewHandle } from './view/renderPreview';
 
 interface DrawioBlocksPluginData {
 	editorSettingsVersion?: string;
 	compressXml?: boolean;
+	defaultEditDestination?: PreviewButtonDestination;
+	defaultViewDestination?: PreviewButtonDestination;
 	previewBorderColor?: string;
 	showPreviewGrid?: boolean;
 	useLocalEditor?: boolean;
 }
 
+export type PreviewButtonDestination = 'modal' | 'tab';
+
 export default class DrawioBlocksPlugin extends Plugin {
 	previewService!: PreviewService;
 
 	compressXml = false;
+	defaultEditDestination: PreviewButtonDestination = 'modal';
+	defaultViewDestination: PreviewButtonDestination = 'modal';
 	previewBorderColor = DEFAULT_PREVIEW_BORDER_COLOR;
 	showPreviewGrid = false;
 	localEditorDownloaded = false;
-	localEditorInstalled = false;
 	localEditorInstalledVersion: string | null = null;
 	localEditorInstallPhase: LocalEditorInstallPhase | null = null;
 	localEditorEnabling = false;
@@ -55,6 +65,8 @@ export default class DrawioBlocksPlugin extends Plugin {
 	private editorSessionCounter = 0;
 	private readonly editorSessions = new Map<string, DrawioEditorSession>();
 	private readonly previewHandles = new Set<PreviewHandle>();
+	private viewerSessionCounter = 0;
+	private readonly viewerSessions = new Map<string, DrawioViewerSession>();
 	private localEditorDownloadOperation: Promise<void> | null = null;
 	private editorRuntime!: OfflineEditorRuntime;
 	private editorSettingsVersion = DEFAULT_EDITOR_SETTINGS_VERSION;
@@ -78,6 +90,12 @@ export default class DrawioBlocksPlugin extends Plugin {
 			}
 
 			this.compressXml = data.compressXml === true;
+			if (this.isPreviewButtonDestination(data.defaultEditDestination)) {
+				this.defaultEditDestination = data.defaultEditDestination;
+			}
+			if (this.isPreviewButtonDestination(data.defaultViewDestination)) {
+				this.defaultViewDestination = data.defaultViewDestination;
+			}
 			if (
 				typeof data.previewBorderColor === 'string' &&
 				/^#[\da-f]{6}$/i.test(data.previewBorderColor)
@@ -100,6 +118,7 @@ export default class DrawioBlocksPlugin extends Plugin {
 		this.previewService = new PreviewService(this.editorRuntime);
 
 		this.registerView(DRAWIO_EDITOR_VIEW_TYPE, (leaf) => new DrawioEditorView(leaf, this));
+		this.registerView(DRAWIO_VIEWER_VIEW_TYPE, (leaf) => new DrawioViewerView(leaf, this));
 		this.settingsTab = new DrawioBlocksSettingTab(this);
 		this.addSettingTab(this.settingsTab);
 
@@ -144,7 +163,40 @@ export default class DrawioBlocksPlugin extends Plugin {
 		}
 		this.previewHandles.clear();
 		this.editorSessions.clear();
+		this.viewerSessions.clear();
 		this.settingsTab = null;
+	}
+
+	openViewer(title: string, imageUri: string): void {
+		new DrawioViewerModal(this.app, title, imageUri).open();
+	}
+
+	async openViewerInTab(title: string, imageUri: string): Promise<void> {
+		const sessionId = `${Date.now()}-${++this.viewerSessionCounter}`;
+		const leaf = this.app.workspace.getLeaf('tab');
+		this.viewerSessions.set(sessionId, { title, imageUri });
+
+		try {
+			await leaf.setViewState({
+				type: DRAWIO_VIEWER_VIEW_TYPE,
+				active: true,
+				state: { sessionId },
+			});
+			await this.app.workspace.revealLeaf(leaf);
+		} catch (error) {
+			this.viewerSessions.delete(sessionId);
+			leaf.detach();
+			const message = error instanceof Error ? error.message : String(error);
+			new Notice(`draw.io Blocks: Could not open viewer tab: ${message}`, 8000);
+		}
+	}
+
+	resolveViewerSession(sessionId: string): DrawioViewerSession | null {
+		return this.viewerSessions.get(sessionId) ?? null;
+	}
+
+	releaseViewerSession(sessionId: string): void {
+		this.viewerSessions.delete(sessionId);
 	}
 
 	openEditor(source: DrawioSource, onSaved?: (xml: string) => void): void {
@@ -249,10 +301,16 @@ export default class DrawioBlocksPlugin extends Plugin {
 		return value !== null && typeof value === 'object';
 	}
 
+	private isPreviewButtonDestination(value: unknown): value is PreviewButtonDestination {
+		return value === 'modal' || value === 'tab';
+	}
+
 	async savePluginData(): Promise<void> {
 		await this.saveData({
 			editorSettingsVersion: this.editorSettingsVersion,
 			compressXml: this.compressXml,
+			defaultEditDestination: this.defaultEditDestination,
+			defaultViewDestination: this.defaultViewDestination,
 			previewBorderColor: this.previewBorderColor,
 			showPreviewGrid: this.showPreviewGrid,
 			useLocalEditor: this.useLocalEditor,
@@ -261,21 +319,6 @@ export default class DrawioBlocksPlugin extends Plugin {
 
 	get localEditorVersion(): string {
 		return this.editorRuntime.localEditorVersion;
-	}
-
-	get localEditorUpdateAvailable(): boolean {
-		if (
-			!this.localEditorDownloaded ||
-			this.localEditorInstalled ||
-			!this.localEditorInstalledVersion
-		) {
-			return false;
-		}
-
-		return (
-			this.localEditorInstalledVersion === this.localEditorVersion ||
-			compareDrawioVersions(this.localEditorVersion, this.localEditorInstalledVersion) > 0
-		);
 	}
 
 	downloadLocalEditor(): Promise<void> {
@@ -311,7 +354,6 @@ export default class DrawioBlocksPlugin extends Plugin {
 			if (this.useLocalEditor) await this.setUseLocalEditor(false);
 			await this.editorRuntime.removeLocalEditor();
 			this.localEditorDownloaded = false;
-			this.localEditorInstalled = false;
 			this.localEditorInstalledVersion = null;
 		} finally {
 			this.localEditorRemoving = false;
@@ -322,7 +364,6 @@ export default class DrawioBlocksPlugin extends Plugin {
 	async setUseLocalEditor(value: boolean): Promise<void> {
 		if (value && !(await this.editorRuntime.hasLocalEditorInstallation())) {
 			this.localEditorDownloaded = false;
-			this.localEditorInstalled = false;
 			throw new Error('Download the local editor before enabling local mode.');
 		}
 		if (value) {
@@ -396,11 +437,7 @@ export default class DrawioBlocksPlugin extends Plugin {
 	}
 
 	private async refreshLocalEditorState(): Promise<void> {
-		const [installed, installedVersion] = await Promise.all([
-			this.editorRuntime.isLocalEditorInstalled(),
-			this.editorRuntime.getInstalledLocalEditorVersion(),
-		]);
-		this.localEditorInstalled = installed;
+		const installedVersion = await this.editorRuntime.getInstalledLocalEditorVersion();
 		this.localEditorInstalledVersion = installedVersion;
 		this.localEditorDownloaded = installedVersion !== null;
 	}
