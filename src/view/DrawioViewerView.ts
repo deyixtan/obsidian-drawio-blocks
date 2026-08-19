@@ -1,5 +1,5 @@
 import { ItemView, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
-import { DrawioViewer } from './DrawioViewer';
+import { DRAWIO_VIEWER_TITLE, DrawioViewer } from './DrawioViewer';
 
 export const DRAWIO_VIEWER_VIEW_TYPE = 'drawio-blocks-viewer';
 
@@ -39,7 +39,7 @@ export class DrawioViewerView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return this.session?.title ?? 'draw.io Viewer';
+		return DRAWIO_VIEWER_TITLE;
 	}
 
 	getState(): Record<string, unknown> {
@@ -79,7 +79,12 @@ export class DrawioViewerView extends ItemView {
 			return;
 		}
 
-		this.viewer = new DrawioViewer(this.contentEl, this.session.title, this.session.imageUri);
+		this.viewer = new DrawioViewer(
+			this.contentEl,
+			this.session.title,
+			this.session.imageUri,
+			() => this.leaf.detach(),
+		);
 		this.viewer.mount();
 	}
 

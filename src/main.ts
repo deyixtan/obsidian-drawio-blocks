@@ -1,16 +1,11 @@
 import {
 	MarkdownPostProcessorContext,
 	MarkdownRenderChild,
-	MarkdownView,
 	Notice,
 	normalizePath,
 	Plugin,
 } from 'obsidian';
-import {
-	DEFAULT_EDITOR_SETTINGS_VERSION,
-	DEFAULT_PREVIEW_BORDER_COLOR,
-	EMPTY_DRAWIO_XML,
-} from './constants';
+import { DEFAULT_EDITOR_SETTINGS_VERSION, DEFAULT_PREVIEW_BORDER_COLOR } from './constants';
 import {
 	DRAWIO_EDITOR_VIEW_TYPE,
 	DrawioEditorView,
@@ -26,7 +21,6 @@ import { PreviewService } from './preview/PreviewService';
 import { DrawioBlocksSettingTab } from './settings/DrawioBlocksSettingTab';
 import { CodeBlockSource } from './source/CodeBlockSource';
 import type { DrawioSource } from './source/DrawioSource';
-import { formatDrawioXml } from './utils/xml';
 import { DrawioViewerModal } from './view/DrawioViewerModal';
 import {
 	DRAWIO_VIEWER_VIEW_TYPE,
@@ -124,31 +118,6 @@ export default class DrawioBlocksPlugin extends Plugin {
 
 		this.registerMarkdownCodeBlockProcessor('drawio', (source, element, context) => {
 			this.renderCodeBlock(source, element, context);
-		});
-
-		this.addCommand({
-			id: 'insert-drawio-code-block',
-			name: 'Insert inline draw.io diagram',
-			callback: () => this.insertDrawioCodeBlock(),
-		});
-
-		this.addCommand({
-			id: 'refresh-drawio-previews',
-			name: 'Refresh draw.io previews',
-			callback: () => this.refreshAllPreviews(),
-		});
-
-		this.addCommand({
-			id: 'reset-drawio-editor-settings',
-			name: 'Reset draw.io editor settings',
-			callback: async () => {
-				this.editorSettingsVersion = Date.now().toString();
-				await this.savePluginData();
-
-				new Notice(
-					'draw.io editor settings will reset the next time the editor is opened.',
-				);
-			},
 		});
 
 		this.registerEvent(this.app.workspace.on('css-change', () => this.refreshAllPreviews()));
@@ -266,17 +235,6 @@ export default class DrawioBlocksPlugin extends Plugin {
 		return window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
 	}
 
-	private insertDrawioCodeBlock(): void {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) {
-			new Notice('Open a Markdown note before inserting a draw.io diagram.');
-			return;
-		}
-
-		const body = formatDrawioXml(EMPTY_DRAWIO_XML);
-		view.editor.replaceSelection(`\n\`\`\`drawio\n${body}\n\`\`\`\n`);
-	}
-
 	private renderCodeBlock(
 		sourceXml: string,
 		element: HTMLElement,
@@ -315,6 +273,70 @@ export default class DrawioBlocksPlugin extends Plugin {
 			showPreviewGrid: this.showPreviewGrid,
 			useLocalEditor: this.useLocalEditor,
 		} satisfies DrawioBlocksPluginData);
+	}
+
+	async resetEditorPreferences(): Promise<void> {
+		const previousVersion = this.editorSettingsVersion;
+		this.editorSettingsVersion = Date.now().toString();
+
+		try {
+			await this.savePluginData();
+		} catch (error) {
+			this.editorSettingsVersion = previousVersion;
+			throw error;
+		}
+	}
+
+	async resetPluginSettings(): Promise<void> {
+		if (
+			this.localEditorDownloadOperation ||
+			this.localEditorInstallPhase !== null ||
+			this.localEditorEnabling ||
+			this.localEditorRemoving
+		) {
+			throw new Error(
+				'Wait for the local editor operation to finish before resetting settings.',
+			);
+		}
+
+		this.compressXml = false;
+		this.defaultEditDestination = 'modal';
+		this.defaultViewDestination = 'modal';
+		this.previewBorderColor = DEFAULT_PREVIEW_BORDER_COLOR;
+		this.showPreviewGrid = false;
+
+		let cleanupError: unknown = null;
+		if (this.useLocalEditor || this.localEditorDownloaded) {
+			try {
+				await this.setOfflineModeEnabled(false);
+			} catch (error) {
+				cleanupError = error;
+			}
+		}
+		if (this.useLocalEditor) {
+			this.useLocalEditor = false;
+			this.editorRuntime.setUseLocalEditor(false);
+			this.restartPreviewService();
+		}
+
+		try {
+			await this.savePluginData();
+		} finally {
+			this.refreshPreviewAppearance();
+			this.refreshSettings();
+		}
+
+		if (cleanupError) {
+			const message =
+				cleanupError instanceof Error
+					? cleanupError.message
+					: typeof cleanupError === 'string'
+						? cleanupError
+						: 'Unknown error.';
+			throw new Error(
+				`Plugin settings reset, but the local editor could not be removed: ${message}`,
+			);
+		}
 	}
 
 	get localEditorVersion(): string {

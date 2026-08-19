@@ -123,6 +123,63 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 					},
 				],
 			},
+			{
+				type: 'group',
+				heading: 'Advanced',
+				items: [
+					{
+						name: 'Reset editor preferences',
+						desc: 'Clear preferences stored by diagrams.net. The reset takes effect the next time the editor is opened.',
+						aliases: ['reset draw.io', 'restore editor defaults'],
+						render: (setting) => {
+							setting.addButton((button) =>
+								button
+									.setButtonText('Reset')
+									.setDestructive()
+									.onClick(async () => {
+										button.setDisabled(true);
+										try {
+											await this.plugin.resetEditorPreferences();
+											new Notice(
+												'draw.io Blocks: Editor preferences will reset the next time the editor is opened.',
+											);
+										} catch (error) {
+											this.showError(error);
+										} finally {
+											button.setDisabled(false);
+										}
+									}),
+							);
+						},
+					},
+					{
+						name: 'Reset plugin settings',
+						desc: 'Restore all draw.io Blocks options to their defaults and remove the downloaded local editor.',
+						aliases: ['restore plugin defaults', 'reset options'],
+						render: (setting) => {
+							setting.addButton((button) =>
+								button
+									.setButtonText('Reset')
+									.setDestructive()
+									.setDisabled(busy)
+									.onClick(async () => {
+										button.setDisabled(true);
+										try {
+											await this.plugin.resetPluginSettings();
+											new Notice(
+												'draw.io Blocks: Plugin settings reset to defaults.',
+											);
+										} catch (error) {
+											this.showError(error);
+										} finally {
+											button.setDisabled(false);
+										}
+									}),
+							);
+						},
+					},
+				],
+			},
 		];
 	}
 

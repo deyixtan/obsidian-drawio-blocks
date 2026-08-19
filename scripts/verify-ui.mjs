@@ -8,6 +8,7 @@ const [
 	viewer,
 	viewerModal,
 	viewerView,
+	editorModal,
 	copyPreview,
 	savePreview,
 	settings,
@@ -21,6 +22,7 @@ const [
 	readFile(path.join(projectRoot, 'src', 'view', 'DrawioViewer.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'view', 'DrawioViewerModal.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'view', 'DrawioViewerView.ts'), 'utf8'),
+	readFile(path.join(projectRoot, 'src', 'editor', 'DrawioModal.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'view', 'copyPreview.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'view', 'SavePreviewImageModal.ts'), 'utf8'),
 	readFile(path.join(projectRoot, 'src', 'settings', 'DrawioBlocksSettingTab.ts'), 'utf8'),
@@ -47,6 +49,8 @@ for (const value of [
 	"addEventListener('contextmenu'",
 	"addEventListener('pointerdown'",
 	"addEventListener('pointermove'",
+	'suppressContextMenuUntil',
+	'postLongPressSuppression',
 	"event.key === 'F10'",
 	"event.key !== 'ContextMenu'",
 	'viewButton.disabled',
@@ -64,6 +68,9 @@ for (const value of [
 	"container.toggleClass('is-empty'",
 	'getComputedStyle',
 	'lineHeight',
+	"'aria-labelledby': accessibleLabelId",
+	'drawio-blocks-visually-hidden',
+	'container.style.setProperty',
 ]) {
 	if (!preview.includes(value)) throw new Error(`Preview UI is missing ${value}.`);
 }
@@ -72,11 +79,21 @@ for (const value of [
 	"'Zoom out'",
 	"'Zoom in'",
 	"text: 'Fit'",
+	"'aria-label': 'Close viewer'",
+	"setIcon(this.closeButton, 'x')",
+	'this.requestClose?.()',
+	"DRAWIO_VIEWER_TITLE = 'draw.io Viewer'",
+	'text: DRAWIO_VIEWER_TITLE',
 	"addEventListener('wheel'",
 	"addEventListener('pointerdown'",
 	'setPointerCapture',
 	'cancelScheduledFit',
 	'hasUserTransform',
+	"addEventListener('touchstart'",
+	'event.stopPropagation()',
+	'this.pointers',
+	'gestureStartDistance',
+	'constrainScale',
 	'zoomAt',
 	'fit()',
 	'translate3d',
@@ -87,8 +104,17 @@ for (const value of [
 if (!viewerModal.includes('DrawioViewer') || !viewerModal.includes('viewer.mount()')) {
 	throw new Error('The viewer modal does not mount the shared diagram viewer.');
 }
+if (!viewerModal.includes('() =>') || !viewerModal.includes('this.close()')) {
+	throw new Error('The viewer toolbar close button does not close its modal.');
+}
 if (!viewerView.includes('DRAWIO_VIEWER_VIEW_TYPE') || !viewerView.includes('DrawioViewer')) {
 	throw new Error('The viewer tab does not mount the shared diagram viewer.');
+}
+if (!viewerView.includes('return DRAWIO_VIEWER_TITLE')) {
+	throw new Error('The viewer tab does not use the consistent draw.io Viewer title.');
+}
+if (!viewerView.includes('this.leaf.detach()')) {
+	throw new Error('The viewer toolbar close button does not close its tab.');
 }
 for (const value of [
 	'ClipboardItem',
@@ -105,6 +131,7 @@ for (const value of [
 	'getAllFolders(true)',
 	"setName('Folder')",
 	"setName('File')",
+	'drawio-blocks-save-image-file',
 	'addDropdown',
 	"addOption('png', 'PNG')",
 	"addOption('jpeg', 'JPG')",
@@ -126,6 +153,12 @@ if (preview.includes('drawio-blocks-preview-action mod-cta')) {
 }
 if (preview.includes("text: 'More'")) {
 	throw new Error('The preview still includes the obsolete More button.');
+}
+if (preview.includes("'aria-label': `${source.title()} preview")) {
+	throw new Error('The SVG preview still exposes a delayed hover tooltip.');
+}
+if (preview.includes('drawio-blocks-embed-host') || styles.includes('drawio-blocks-embed-host')) {
+	throw new Error('The native Markdown hover border is still suppressed.');
 }
 if (styles.includes('!important')) {
 	throw new Error('Plugin styling must not rely on !important overrides.');
@@ -150,13 +183,41 @@ for (const value of [
 	'object-fit: contain',
 	"[data-type='drawio-blocks-editor']",
 	'drawio-blocks-viewer-modal',
+	'body:has(.drawio-blocks-modal) .modal-header',
+	'body:has(.drawio-blocks-modal) .modal-header-button',
+	'body:has(.drawio-blocks-viewer-modal) .modal-header',
+	'body:has(.drawio-blocks-viewer-modal) .modal-header-button',
+	'drawio-blocks-viewer-close',
 	'drawio-blocks-viewer-viewport',
 	'drawio-blocks-save-image-modal',
 	"[data-type='drawio-blocks-viewer']",
 	'touch-action: none',
+	'overscroll-behavior: none',
+	'drawio-blocks-preview-card:not(.is-empty)',
+	'padding-block: var(--drawio-blocks-preview-spacing)',
+	'drawio-blocks-visually-hidden',
+	'grid-template-columns: minmax(0, 1fr) auto',
+	'var(--safe-area-inset-top,',
+	'env(safe-area-inset-top, 0px)',
+	'width: calc(',
+	'100vw - var(--drawio-blocks-safe-area-left)',
+	'100dvh - var(--drawio-blocks-safe-area-top)',
+	'transform: none',
 	'transform-origin: 0 0',
 ]) {
 	if (!styles.includes(value)) throw new Error(`Plugin styling is missing ${value}.`);
+}
+for (const source of [viewerModal, editorModal]) {
+	for (const value of ['modalClose', "querySelector<HTMLElement>('.modal-header')"]) {
+		if (source.includes(value)) {
+			throw new Error(
+				`Modal code still includes obsolete close-button suppression: ${value}.`,
+			);
+		}
+	}
+}
+if (styles.includes('.modal-close-button')) {
+	throw new Error('Plugin styling still targets the obsolete native modal close button.');
 }
 for (const value of ['isDrawioDiagramEmpty', "getAttribute('vertex')", "getAttribute('edge')"]) {
 	if (!xml.includes(value)) throw new Error(`Empty-diagram detection is missing ${value}.`);
@@ -166,6 +227,7 @@ for (const value of [
 	"heading: 'Offline mode'",
 	"heading: 'Preview actions'",
 	"heading: 'Diagram appearance and storage'",
+	"heading: 'Advanced'",
 	"name: 'Switch to local editor'",
 	'desc: `Version: ${displayedVersion}`',
 	"name: 'View button'",
@@ -177,6 +239,12 @@ for (const value of [
 	"tab: 'Open in tab'",
 	"name: 'Preview border color'",
 	"name: 'Show preview grid'",
+	"name: 'Reset editor preferences'",
+	"name: 'Reset plugin settings'",
+	"setButtonText('Reset')",
+	'setDestructive()',
+	'resetEditorPreferences',
+	'resetPluginSettings',
 	'drawio-blocks-offline-progress',
 ]) {
 	if (!settings.includes(value)) throw new Error(`Searchable settings UI is missing ${value}.`);
@@ -203,13 +271,27 @@ for (const value of [
 	'openViewerInTab',
 	'viewerSessions',
 	'DRAWIO_VIEWER_VIEW_TYPE',
+	'resetEditorPreferences',
+	'resetPluginSettings',
 ]) {
 	if (!plugin.includes(value)) throw new Error(`Background settings state is missing ${value}.`);
 }
 for (const value of ['localEditorUpdateAvailable', 'compareDrawioVersions']) {
 	if (plugin.includes(value)) throw new Error(`Plugin still includes editor updates: ${value}.`);
 }
+for (const value of [
+	'insert-drawio-code-block',
+	'refresh-drawio-previews',
+	'reset-drawio-editor-settings',
+	'this.addCommand',
+]) {
+	if (plugin.includes(value))
+		throw new Error(`Plugin still includes obsolete command: ${value}.`);
+}
+for (const value of ['height: 100dvh', 'width: 100vw']) {
+	if (styles.includes(value)) throw new Error(`Mobile modal styling still includes ${value}.`);
+}
 
 process.stdout.write(
-	'Verified preview actions and context menu, reusable pan/zoom viewer, settings, editor titles, and error overlays\n',
+	'Verified preview actions, gesture-isolated pinch viewer, safe-area modals, settings, and error overlays\n',
 );

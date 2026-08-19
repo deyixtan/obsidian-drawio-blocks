@@ -35,7 +35,7 @@ Then reload Obsidian and enable the plugin.
 
 ## Usage
 
-Run **Insert inline draw.io diagram** from the command palette, or create an empty `drawio` code block:
+Create an empty `drawio` code block:
 
 ````markdown
 ```drawio
@@ -45,7 +45,7 @@ Run **Insert inline draw.io diagram** from the command palette, or create an emp
 
 Hover over or tap a preview to reveal **View** and **Edit**. Both open in a modal by default, but each can be configured to open in a tab. Editor changes are saved automatically.
 
-In the viewer, drag to pan, use the mouse wheel or **−** and **+** to zoom, and select **Fit** to reset the diagram.
+In the viewer, drag or swipe to pan; pinch, use the mouse wheel, or select **−** and **+** to zoom. Select **Fit** to reset the diagram.
 
 Open the preview context menu by right-clicking on desktop, pressing and holding on mobile, or using the Context Menu key or **Shift+F10**. From the menu, you can view or edit in a modal or tab, copy the image or XML, and save as PNG or JPG.
 
@@ -67,11 +67,11 @@ Open the preview context menu by right-clicking on desktop, pressing and holding
 
 **Compress XML** reduces Markdown block size, but makes the contents less readable and produces less useful Git diffs. Existing diagrams are converted the next time they are opened and saved.
 
-## Commands
+### Advanced
 
-- **Insert inline draw.io diagram**
-- **Refresh draw.io previews**
-- **Reset draw.io editor settings**
+**Reset editor preferences** clears preferences stored by the editor. The reset takes effect the next time the editor is opened.
+
+**Reset plugin settings** restores all draw.io Blocks options to their defaults and removes the downloaded local editor.
 
 ## Privacy and security
 

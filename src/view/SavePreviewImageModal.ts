@@ -61,6 +61,7 @@ export class SavePreviewImageModal extends Modal {
 		this.contentEl.empty();
 
 		this.filenameSetting = new Setting(this.contentEl)
+			.setClass('drawio-blocks-save-image-file')
 			.setName('File')
 			.addText((input) => {
 				this.filenameInput = input;

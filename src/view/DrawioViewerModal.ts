@@ -16,7 +16,9 @@ export class DrawioViewerModal extends Modal {
 		this.modalEl.addClass('drawio-blocks-viewer-modal');
 		this.modalEl.setAttribute('aria-label', `View ${this.title}`);
 		this.contentEl.addClass('drawio-blocks-viewer-content');
-		this.viewer = new DrawioViewer(this.contentEl, this.title, this.imageUri);
+		this.viewer = new DrawioViewer(this.contentEl, this.title, this.imageUri, () =>
+			this.close(),
+		);
 		this.viewer.mount();
 	}
 

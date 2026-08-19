@@ -5,6 +5,8 @@ import { isDrawioDiagramEmpty } from '../utils/xml';
 import { copyPreviewImage, copyPreviewXml } from './copyPreview';
 import { SavePreviewImageModal } from './SavePreviewImageModal';
 
+let previewLabelCounter = 0;
+
 export interface PreviewHandle {
 	refresh(): void;
 	updateAppearance(): void;
@@ -29,13 +31,19 @@ export function mountPreview(
 	const codeBlockHost = container.closest('pre');
 	codeBlockHost?.addClass('drawio-blocks-codeblock-host');
 
+	const accessibleLabelId = `drawio-blocks-preview-label-${++previewLabelCounter}`;
 	const imageWrap = container.createDiv({
 		cls: 'drawio-blocks-image-wrap',
 		attr: {
 			role: 'group',
 			tabindex: '0',
-			'aria-label': `${source.title()} preview. Select to show View and Edit. Right-click or press and hold for more actions.`,
+			'aria-labelledby': accessibleLabelId,
 		},
+	});
+	imageWrap.createSpan({
+		cls: 'drawio-blocks-visually-hidden',
+		text: `${source.title()} preview. Select to show View and Edit. Right-click or press and hold for more actions.`,
+		attr: { id: accessibleLabelId },
 	});
 	const status = imageWrap.createDiv({
 		cls: 'drawio-blocks-preview-status',
@@ -83,11 +91,11 @@ export function mountPreview(
 			'aria-label',
 			`Edit ${source.title()} in ${plugin.defaultEditDestination === 'tab' ? 'a tab' : 'a modal'}`,
 		);
-		imageWrap.style.setProperty(
+		container.style.setProperty(
 			'--drawio-blocks-preview-border-color',
 			plugin.previewBorderColor,
 		);
-		imageWrap.style.setProperty(
+		container.style.setProperty(
 			'--drawio-blocks-preview-grid-color',
 			`${plugin.previewBorderColor}3d`,
 		);
@@ -216,15 +224,18 @@ export function mountPreview(
 		clearLongPress();
 		event.preventDefault();
 		event.stopPropagation();
+		if (Date.now() < suppressContextMenuUntil) return;
 		createActionsMenu().showAtMouseEvent(event);
 	};
 
 	const longPressDelay = 550;
 	const longPressMovement = 12;
+	const postLongPressSuppression = 1000;
 	let longPressTimer: number | null = null;
 	let longPressPointerId: number | null = null;
 	let longPressOrigin: { x: number; y: number } | null = null;
 	let suppressClickUntil = 0;
+	let suppressContextMenuUntil = 0;
 
 	function clearLongPress(): void {
 		if (longPressTimer !== null) window.clearTimeout(longPressTimer);
@@ -247,7 +258,9 @@ export function mountPreview(
 		longPressTimer = window.setTimeout(() => {
 			if (longPressPointerId !== pointerId) return;
 			clearLongPress();
-			suppressClickUntil = Date.now() + 750;
+			const suppressUntil = Date.now() + postLongPressSuppression;
+			suppressClickUntil = suppressUntil;
+			suppressContextMenuUntil = suppressUntil;
 			createActionsMenu().showAtPosition({ x, y }, imageWrap.ownerDocument);
 		}, longPressDelay);
 	};
@@ -321,8 +334,8 @@ export function mountPreview(
 			imageWrap.removeEventListener('keydown', onPreviewKeyDown);
 			image.removeAttribute('src');
 			container.style.removeProperty('--drawio-blocks-empty-preview-height');
-			imageWrap.style.removeProperty('--drawio-blocks-preview-border-color');
-			imageWrap.style.removeProperty('--drawio-blocks-preview-grid-color');
+			container.style.removeProperty('--drawio-blocks-preview-border-color');
+			container.style.removeProperty('--drawio-blocks-preview-grid-color');
 			codeBlockHost?.removeClass('drawio-blocks-codeblock-host');
 		},
 	};

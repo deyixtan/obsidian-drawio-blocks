@@ -31,6 +31,8 @@ for (const requiredValue of [
 	'Edit button',
 	'Preview border color',
 	'Show preview grid',
+	'Reset editor preferences',
+	'Reset plugin settings',
 	'View in modal',
 	'View in tab',
 	'Edit in modal',
@@ -52,6 +54,9 @@ for (const requiredValue of [
 for (const removedValue of [
 	'https://api.github.com/repos/jgraph/drawio/releases/latest',
 	'Update to draw.io',
+	'Insert inline draw.io diagram',
+	'Refresh draw.io previews',
+	'Reset draw.io editor settings',
 ]) {
 	if (source.includes(removedValue)) {
 		throw new Error(`main.js still contains removed editor update data: ${removedValue}`);
@@ -59,11 +64,11 @@ for (const removedValue of [
 }
 
 if (
-	manifest.version !== '2.1.0' ||
+	manifest.version !== '2.1.1' ||
 	manifest.minAppVersion !== '1.13.0' ||
-	versions['2.1.0'] !== '1.13.0'
+	versions['2.1.1'] !== '1.13.0'
 ) {
-	throw new Error('Plugin 2.1.0 version metadata is inconsistent.');
+	throw new Error('Plugin 2.1.1 version metadata is inconsistent.');
 }
 
 new Script(source, { filename: 'main.js' });

@@ -1,20 +1,34 @@
+import { setIcon } from 'obsidian';
+
 const FIT_PADDING = 24;
 const MAX_SCALE = 16;
 const MIN_SCALE = 0.01;
 const ZOOM_FACTOR = 1.25;
 
+export const DRAWIO_VIEWER_TITLE = 'draw.io Viewer';
+
+interface PointerPosition {
+	x: number;
+	y: number;
+}
+
 export class DrawioViewer {
+	private closeButton: HTMLButtonElement | null = null;
 	private fitButton: HTMLButtonElement | null = null;
+	private gestureStartDistance = 0;
+	private gestureStartImageX = 0;
+	private gestureStartImageY = 0;
+	private gestureStartOffsetX = 0;
+	private gestureStartOffsetY = 0;
+	private gestureStartScale = 1;
+	private gestureStartX = 0;
+	private gestureStartY = 0;
 	private hasUserTransform = false;
 	private image: HTMLImageElement | null = null;
 	private minimumScale = MIN_SCALE;
 	private offsetX = 0;
 	private offsetY = 0;
-	private pointerId: number | null = null;
-	private pointerStartX = 0;
-	private pointerStartY = 0;
-	private pointerStartOffsetX = 0;
-	private pointerStartOffsetY = 0;
+	private readonly pointers = new Map<number, PointerPosition>();
 	private resizeFrame: number | null = null;
 	private resizeObserver: ResizeObserver | null = null;
 	private scale = 1;
@@ -31,6 +45,7 @@ export class DrawioViewer {
 		private readonly container: HTMLElement,
 		private readonly title: string,
 		private readonly imageUri: string,
+		private readonly requestClose?: () => void,
 	) {}
 
 	mount(): void {
@@ -38,7 +53,7 @@ export class DrawioViewer {
 		this.container.empty();
 		this.shell = this.container.createDiv({ cls: 'drawio-blocks-viewer-shell' });
 		const toolbar = this.shell.createDiv({ cls: 'drawio-blocks-viewer-toolbar' });
-		toolbar.createDiv({ cls: 'drawio-blocks-viewer-title', text: this.title });
+		toolbar.createDiv({ cls: 'drawio-blocks-viewer-title', text: DRAWIO_VIEWER_TITLE });
 		const controls = toolbar.createDiv({ cls: 'drawio-blocks-viewer-controls' });
 
 		this.zoomOutButton = controls.createEl('button', {
@@ -58,13 +73,20 @@ export class DrawioViewer {
 			text: 'Fit',
 			attr: { type: 'button', 'aria-label': 'Fit diagram to viewer' },
 		});
+		if (this.requestClose) {
+			this.closeButton = controls.createEl('button', {
+				cls: 'drawio-blocks-viewer-close',
+				attr: { type: 'button', 'aria-label': 'Close viewer' },
+			});
+			setIcon(this.closeButton, 'x');
+		}
 
 		this.viewport = this.shell.createDiv({
 			cls: 'drawio-blocks-viewer-viewport',
 			attr: {
 				role: 'group',
 				tabindex: '0',
-				'aria-label': 'Diagram viewer. Drag to pan and use the controls to zoom.',
+				'aria-label': 'Diagram viewer. Drag to pan, pinch or use the controls to zoom.',
 			},
 		});
 		this.status = this.viewport.createDiv({
@@ -85,9 +107,14 @@ export class DrawioViewer {
 		this.viewport.addEventListener('pointermove', this.onPointerMove);
 		this.viewport.addEventListener('pointerup', this.onPointerEnd);
 		this.viewport.addEventListener('pointercancel', this.onPointerEnd);
+		this.viewport.addEventListener('touchstart', this.onTouchEvent, { passive: false });
+		this.viewport.addEventListener('touchmove', this.onTouchEvent, { passive: false });
+		this.viewport.addEventListener('touchend', this.onTouchEvent, { passive: false });
+		this.viewport.addEventListener('touchcancel', this.onTouchEvent, { passive: false });
 		this.zoomOutButton.addEventListener('click', this.onZoomOut);
 		this.zoomInButton.addEventListener('click', this.onZoomIn);
 		this.fitButton.addEventListener('click', this.onFit);
+		this.closeButton?.addEventListener('click', this.onClose);
 
 		this.viewerWindow = this.container.ownerDocument.defaultView;
 		this.resizeObserver = new ResizeObserver(this.onResize);
@@ -108,12 +135,18 @@ export class DrawioViewer {
 		this.viewport?.removeEventListener('pointermove', this.onPointerMove);
 		this.viewport?.removeEventListener('pointerup', this.onPointerEnd);
 		this.viewport?.removeEventListener('pointercancel', this.onPointerEnd);
+		this.viewport?.removeEventListener('touchstart', this.onTouchEvent);
+		this.viewport?.removeEventListener('touchmove', this.onTouchEvent);
+		this.viewport?.removeEventListener('touchend', this.onTouchEvent);
+		this.viewport?.removeEventListener('touchcancel', this.onTouchEvent);
 		this.zoomOutButton?.removeEventListener('click', this.onZoomOut);
 		this.zoomInButton?.removeEventListener('click', this.onZoomIn);
 		this.fitButton?.removeEventListener('click', this.onFit);
+		this.closeButton?.removeEventListener('click', this.onClose);
 		this.image?.removeAttribute('src');
 		this.shell?.remove();
 
+		this.closeButton = null;
 		this.fitButton = null;
 		this.image = null;
 		this.resizeObserver = null;
@@ -124,6 +157,7 @@ export class DrawioViewer {
 		this.zoomLabel = null;
 		this.zoomOutButton = null;
 		this.hasUserTransform = false;
+		this.pointers.clear();
 		this.zoomLabelText = '';
 		this.viewerWindow = null;
 	}
@@ -150,6 +184,10 @@ export class DrawioViewer {
 		this.fit();
 	};
 
+	private readonly onClose = (): void => {
+		this.requestClose?.();
+	};
+
 	private readonly onZoomIn = (): void => {
 		this.beginUserTransform();
 		this.zoomAt(this.scale * ZOOM_FACTOR);
@@ -162,43 +200,96 @@ export class DrawioViewer {
 
 	private readonly onWheel = (event: WheelEvent): void => {
 		event.preventDefault();
+		event.stopPropagation();
 		this.beginUserTransform();
 		const factor = Math.exp(-event.deltaY * 0.002);
 		this.zoomAt(this.scale * factor, event.clientX, event.clientY);
 	};
 
 	private readonly onPointerDown = (event: PointerEvent): void => {
-		if (!this.viewport || !event.isPrimary || event.button !== 0) return;
+		if (!this.viewport || event.button !== 0) return;
+		if (event.pointerType === 'mouse' && !event.isPrimary) return;
 
 		event.preventDefault();
+		event.stopPropagation();
 		this.beginUserTransform();
-		this.pointerId = event.pointerId;
-		this.pointerStartX = event.clientX;
-		this.pointerStartY = event.clientY;
-		this.pointerStartOffsetX = this.offsetX;
-		this.pointerStartOffsetY = this.offsetY;
+		this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 		this.viewport.setPointerCapture(event.pointerId);
+		this.restartGesture();
 		this.viewport.addClass('is-panning');
 		this.viewport.focus({ preventScroll: true });
 	};
 
 	private readonly onPointerMove = (event: PointerEvent): void => {
-		if (event.pointerId !== this.pointerId) return;
+		if (!this.pointers.has(event.pointerId)) return;
 
-		this.offsetX = this.pointerStartOffsetX + event.clientX - this.pointerStartX;
-		this.offsetY = this.pointerStartOffsetY + event.clientY - this.pointerStartY;
-		this.updateTransform();
+		event.preventDefault();
+		event.stopPropagation();
+		this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		this.applyGesture();
 	};
 
 	private readonly onPointerEnd = (event: PointerEvent): void => {
-		if (!this.viewport || event.pointerId !== this.pointerId) return;
+		if (!this.viewport || !this.pointers.has(event.pointerId)) return;
 
+		event.preventDefault();
+		event.stopPropagation();
 		if (this.viewport.hasPointerCapture(event.pointerId)) {
 			this.viewport.releasePointerCapture(event.pointerId);
 		}
-		this.pointerId = null;
-		this.viewport.removeClass('is-panning');
+		this.pointers.delete(event.pointerId);
+		if (this.pointers.size > 0) this.restartGesture();
+		else this.viewport.removeClass('is-panning');
 	};
+
+	private readonly onTouchEvent = (event: TouchEvent): void => {
+		if (event.cancelable) event.preventDefault();
+		event.stopPropagation();
+	};
+
+	private restartGesture(): void {
+		if (!this.viewport) return;
+		const [first, second] = [...this.pointers.values()];
+		if (!first) return;
+
+		this.gestureStartOffsetX = this.offsetX;
+		this.gestureStartOffsetY = this.offsetY;
+		this.gestureStartX = first.x;
+		this.gestureStartY = first.y;
+		if (!second) return;
+
+		const bounds = this.viewport.getBoundingClientRect();
+		const centerX = (first.x + second.x) / 2 - bounds.left;
+		const centerY = (first.y + second.y) / 2 - bounds.top;
+		this.gestureStartDistance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y));
+		this.gestureStartScale = this.scale;
+		this.gestureStartImageX = (centerX - this.offsetX) / this.scale;
+		this.gestureStartImageY = (centerY - this.offsetY) / this.scale;
+	}
+
+	private applyGesture(): void {
+		if (!this.viewport) return;
+		const [first, second] = [...this.pointers.values()];
+		if (!first) return;
+
+		if (!second) {
+			this.offsetX = this.gestureStartOffsetX + first.x - this.gestureStartX;
+			this.offsetY = this.gestureStartOffsetY + first.y - this.gestureStartY;
+			this.updateTransform();
+			return;
+		}
+
+		const bounds = this.viewport.getBoundingClientRect();
+		const centerX = (first.x + second.x) / 2 - bounds.left;
+		const centerY = (first.y + second.y) / 2 - bounds.top;
+		const distance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y));
+		this.scale = this.constrainScale(
+			this.gestureStartScale * (distance / this.gestureStartDistance),
+		);
+		this.offsetX = centerX - this.gestureStartImageX * this.scale;
+		this.offsetY = centerY - this.gestureStartImageY * this.scale;
+		this.updateTransform();
+	}
 
 	private scheduleFit(): void {
 		if (!this.viewerWindow) {
@@ -246,7 +337,7 @@ export class DrawioViewer {
 	private zoomAt(nextScale: number, clientX?: number, clientY?: number): void {
 		if (!this.viewport) return;
 
-		const scale = Math.min(MAX_SCALE, Math.max(this.minimumScale, nextScale));
+		const scale = this.constrainScale(nextScale);
 		if (scale === this.scale) return;
 
 		const bounds = this.viewport.getBoundingClientRect();
@@ -259,6 +350,10 @@ export class DrawioViewer {
 		this.offsetX = anchorX - imageX * this.scale;
 		this.offsetY = anchorY - imageY * this.scale;
 		this.updateTransform();
+	}
+
+	private constrainScale(scale: number): number {
+		return Math.min(MAX_SCALE, Math.max(this.minimumScale, scale));
 	}
 
 	private updateTransform(): void {
