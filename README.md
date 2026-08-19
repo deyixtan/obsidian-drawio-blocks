@@ -47,9 +47,13 @@ Create an empty `drawio` code block:
 
 Hover over or tap a preview to reveal **View** and **Edit**. Both open in a modal by default, but each can be configured to open in a tab. Editor changes are saved automatically.
 
-In the viewer, drag or swipe to pan; pinch, use the mouse wheel, or select **−** and **+** to zoom. Select **Fit** to reset the diagram.
+In the viewer, drag or swipe to pan; pinch, use the mouse wheel, or select **−** and **+** to zoom. Select **Fit** to reset the diagram. Select **XML** to inspect and copy the exact read-only diagram source, then **Canvas** to return to the preview. Select **Edit** to replace the current viewer modal or tab with the editor in the same place.
 
-Open the preview context menu by right-clicking on desktop, pressing and holding on mobile, or using the Context Menu key or **Shift+F10**. From the menu, you can view or edit in a modal or tab, copy the image or XML, and save as PNG or JPG.
+Open the preview context menu by right-clicking on desktop, pressing and holding on mobile, or using the Context Menu key or **Shift+F10**. From the menu, you can view or edit in a modal or tab, copy the image or XML, save as PNG, JPG, or DRAWIO, or delete the diagram after confirmation.
+
+![context menu](docs/context-menu.jpg)
+
+Opening a `.drawio` file displays the diagram viewer instead of raw XML. The same draw.io actions are available by right-clicking its viewer or its file in the File explorer.
 
 ## Settings
 

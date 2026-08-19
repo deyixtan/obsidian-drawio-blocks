@@ -1,12 +1,12 @@
 {
 	"name": "drawio-blocks",
-	"version": "2.1.2",
+	"version": "2.2.0",
 	"description": "Edit and render draw.io diagrams inside Markdown code blocks, online or with an optional local editor.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node scripts/verify-build.mjs && node scripts/verify-frame-policy.mjs && node scripts/verify-preview-timeout.mjs && node scripts/verify-ui.mjs && node scripts/verify-offline-runtime.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node scripts/verify-build.mjs && node scripts/verify-frame-policy.mjs && node scripts/verify-preview-timeout.mjs && node scripts/verify-code-block-delete.mjs && node scripts/verify-ui.mjs && node scripts/verify-offline-runtime.mjs",
 		"lint": "eslint .",
 		"format": "prettier . --write",
 		"format:check": "prettier . --check",

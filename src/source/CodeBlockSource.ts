@@ -4,6 +4,7 @@ import { formatDrawioXml, validateDrawioXml } from '../utils/xml';
 import {
 	findDrawioBlocks,
 	getDrawioBlockBody,
+	removeDrawioBlock,
 	replaceDrawioBlockBody,
 	type DrawioBlockRange,
 } from '../utils/codeBlock';
@@ -23,6 +24,10 @@ export class CodeBlockSource implements DrawioSource {
 
 	title(): string {
 		return 'Inline draw.io diagram';
+	}
+
+	deleteDescription(): string {
+		return 'This removes the entire draw.io code block from the note.';
 	}
 
 	snapshot(): string {
@@ -47,6 +52,11 @@ export class CodeBlockSource implements DrawioSource {
 		if (body === null) throw new Error('The draw.io code block could not be read.');
 		this.lastBody = body;
 		return body;
+	}
+
+	async delete(): Promise<void> {
+		this.writeChain = this.writeChain.catch(() => undefined).then(() => this.deleteNow());
+		return this.writeChain;
 	}
 
 	async write(xml: string): Promise<void> {
@@ -102,5 +112,19 @@ export class CodeBlockSource implements DrawioSource {
 
 		if (!replaced) throw new Error('The draw.io code block could not be updated.');
 		this.lastBody = formatted;
+	}
+
+	private async deleteNow(): Promise<void> {
+		const file = this.getSourceFile();
+		let deleted = false;
+
+		await this.app.vault.process(file, (current) => {
+			const lines = current.split(/\r?\n/);
+			const range = this.locateCurrentRange(lines);
+			deleted = true;
+			return removeDrawioBlock(current, range);
+		});
+
+		if (!deleted) throw new Error('The draw.io code block could not be deleted.');
 	}
 }

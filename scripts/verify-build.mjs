@@ -40,6 +40,11 @@ for (const requiredValue of [
 	'Copy image',
 	'Copy XML',
 	'Save image',
+	'DRAWIO',
+	'Delete diagram',
+	'drawio-blocks-file',
+	'Loading XML',
+	'Canvas',
 	'Zoom in',
 	'Zoom out',
 	'Offline Editor',
@@ -64,11 +69,11 @@ for (const removedValue of [
 }
 
 if (
-	manifest.version !== '2.1.2' ||
+	manifest.version !== '2.2.0' ||
 	manifest.minAppVersion !== '1.13.0' ||
-	versions['2.1.2'] !== '1.13.0'
+	versions['2.2.0'] !== '1.13.0'
 ) {
-	throw new Error('Plugin 2.1.2 version metadata is inconsistent.');
+	throw new Error('Plugin 2.2.0 version metadata is inconsistent.');
 }
 
 new Script(source, { filename: 'main.js' });

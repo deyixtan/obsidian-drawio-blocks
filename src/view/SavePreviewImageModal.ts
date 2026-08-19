@@ -11,6 +11,8 @@ import {
 } from 'obsidian';
 import { renderPreviewImage, type PreviewImageFormat } from './copyPreview';
 
+type SaveDiagramFormat = PreviewImageFormat | 'drawio';
+
 class FolderPickerModal extends FuzzySuggestModal<TFolder> {
 	constructor(
 		app: App,
@@ -37,7 +39,7 @@ export class SavePreviewImageModal extends Modal {
 	private folder: TFolder;
 	private folderSetting: Setting | null = null;
 	private folderValueEl: HTMLElement | null = null;
-	private format: PreviewImageFormat = 'png';
+	private format: SaveDiagramFormat = 'png';
 	private filenameInput: TextComponent | null = null;
 	private filenameSetting: Setting | null = null;
 	private saveButton: ButtonComponent | null = null;
@@ -45,7 +47,8 @@ export class SavePreviewImageModal extends Modal {
 
 	constructor(
 		app: App,
-		private readonly image: HTMLImageElement,
+		private readonly imageProvider: () => Promise<HTMLImageElement>,
+		private readonly xmlProvider: () => Promise<string>,
 		private readonly suggestedPath: string,
 	) {
 		super(app);
@@ -74,9 +77,10 @@ export class SavePreviewImageModal extends Modal {
 				dropdown
 					.addOption('png', 'PNG')
 					.addOption('jpeg', 'JPG')
+					.addOption('drawio', 'DRAWIO')
 					.setValue(this.format)
 					.onChange((value) => {
-						this.format = value === 'jpeg' ? 'jpeg' : 'png';
+						this.format = value === 'jpeg' || value === 'drawio' ? value : 'png';
 					}),
 			);
 
@@ -110,7 +114,8 @@ export class SavePreviewImageModal extends Modal {
 		this.contentEl.empty();
 	}
 
-	private extension(): 'png' | 'jpg' {
+	private extension(): 'drawio' | 'jpg' | 'png' {
+		if (this.format === 'drawio') return 'drawio';
 		return this.format === 'png' ? 'png' : 'jpg';
 	}
 
@@ -119,7 +124,7 @@ export class SavePreviewImageModal extends Modal {
 		const separator = normalized.lastIndexOf('/');
 		const folderPath = separator >= 0 ? normalized.slice(0, separator) : '';
 		const rawFilename = normalized.slice(separator + 1);
-		const filename = rawFilename.replace(/\.(?:jpe?g|png)$/i, '') || 'drawio-diagram';
+		const filename = rawFilename.replace(/\.(?:drawio|jpe?g|png)$/i, '') || 'drawio-diagram';
 		const folder = folderPath ? this.app.vault.getFolderByPath(folderPath) : null;
 
 		return { folder: folder ?? this.app.vault.getRoot(), filename };
@@ -138,7 +143,6 @@ export class SavePreviewImageModal extends Modal {
 	private updateFolder(): void {
 		const label = this.folder.isRoot() ? 'Vault root' : this.folder.path;
 		this.folderValueEl?.setText(label);
-		this.folderValueEl?.setAttribute('title', label);
 	}
 
 	private readonly onInputKeyDown = (event: KeyboardEvent): void => {
@@ -150,7 +154,7 @@ export class SavePreviewImageModal extends Modal {
 	private filename(): string {
 		return (this.filenameInput?.getValue() ?? '')
 			.trim()
-			.replace(/\.(?:jpe?g|png)$/i, '')
+			.replace(/\.(?:drawio|jpe?g|png)$/i, '')
 			.trim();
 	}
 
@@ -205,8 +209,13 @@ export class SavePreviewImageModal extends Modal {
 		this.filenameSetting.setErrorMessage(null);
 
 		try {
-			const blob = await renderPreviewImage(this.image, this.format);
-			await this.app.vault.createBinary(path, await blob.arrayBuffer());
+			if (this.format === 'drawio') {
+				await this.app.vault.create(path, await this.xmlProvider());
+			} else {
+				const image = await this.imageProvider();
+				const blob = await renderPreviewImage(image, this.format);
+				await this.app.vault.createBinary(path, await blob.arrayBuffer());
+			}
 			new Notice(`draw.io Blocks: Saved ${path}.`);
 			this.close();
 		} catch (error) {

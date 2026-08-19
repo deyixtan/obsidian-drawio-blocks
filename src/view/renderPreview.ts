@@ -1,11 +1,7 @@
-import { Menu, Notice } from 'obsidian';
 import type DrawioBlocksPlugin from '../main';
 import type { DrawioSource } from '../source/DrawioSource';
 import { isDrawioDiagramEmpty } from '../utils/xml';
-import { copyPreviewImage, copyPreviewXml } from './copyPreview';
-import { SavePreviewImageModal } from './SavePreviewImageModal';
-
-let previewLabelCounter = 0;
+import { createDiagramMenu } from './diagramMenu';
 
 export interface PreviewHandle {
 	refresh(): void;
@@ -31,19 +27,9 @@ export function mountPreview(
 	const codeBlockHost = container.closest('pre');
 	codeBlockHost?.addClass('drawio-blocks-codeblock-host');
 
-	const accessibleLabelId = `drawio-blocks-preview-label-${++previewLabelCounter}`;
 	const imageWrap = container.createDiv({
 		cls: 'drawio-blocks-image-wrap',
-		attr: {
-			role: 'group',
-			tabindex: '0',
-			'aria-labelledby': accessibleLabelId,
-		},
-	});
-	imageWrap.createSpan({
-		cls: 'drawio-blocks-visually-hidden',
-		text: `${source.title()} preview. Select to show View and Edit. Right-click or press and hold for more actions.`,
-		attr: { id: accessibleLabelId },
+		attr: { tabindex: '0' },
 	});
 	const status = imageWrap.createDiv({
 		cls: 'drawio-blocks-preview-status',
@@ -83,14 +69,6 @@ export function mountPreview(
 
 	const updateAppearance = (): void => {
 		updateEmptyPreviewHeight();
-		viewButton.setAttribute(
-			'aria-label',
-			`View ${source.title()} in ${plugin.defaultViewDestination === 'tab' ? 'a tab' : 'a modal'}`,
-		);
-		editButton.setAttribute(
-			'aria-label',
-			`Edit ${source.title()} in ${plugin.defaultEditDestination === 'tab' ? 'a tab' : 'a modal'}`,
-		);
 		container.style.setProperty(
 			'--drawio-blocks-preview-border-color',
 			plugin.previewBorderColor,
@@ -154,8 +132,8 @@ export function mountPreview(
 
 		window.setTimeout(() => {
 			if (!destroyed) {
-				if (inTab) void plugin.openViewerInTab(source.title(), imageUri);
-				else plugin.openViewer(source.title(), imageUri);
+				if (inTab) void plugin.openViewerInTab(source, imageUri, refresh);
+				else plugin.openViewer(source, imageUri, refresh);
 			}
 		}, 0);
 	};
@@ -172,52 +150,15 @@ export function mountPreview(
 		openEditor(plugin.defaultEditDestination === 'tab');
 	};
 
-	const createActionsMenu = (): Menu => {
-		const menu = new Menu().setNoIcon();
-		menu.addItem((item) => item.setTitle('View in modal').onClick(() => openViewer(false)));
-		menu.addItem((item) => item.setTitle('View in tab').onClick(() => openViewer(true)));
-		menu.addSeparator();
-		menu.addItem((item) => item.setTitle('Edit in modal').onClick(() => openEditor(false)));
-		menu.addItem((item) => item.setTitle('Edit in tab').onClick(() => openEditor(true)));
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item.setTitle('Copy image').onClick(() => {
-				void copyPreviewImage(image).then(
-					() => new Notice('draw.io Blocks: Copied diagram image.'),
-					(error: unknown) =>
-						new Notice(
-							`draw.io Blocks: ${error instanceof Error ? error.message : String(error)}`,
-							8000,
-						),
-				);
-			}),
-		);
-		menu.addItem((item) =>
-			item.setTitle('Copy XML').onClick(() => {
-				void xmlProvider()
-					.then(copyPreviewXml)
-					.then(
-						() => new Notice('draw.io Blocks: Copied diagram XML.'),
-						(error: unknown) =>
-							new Notice(
-								`draw.io Blocks: ${error instanceof Error ? error.message : String(error)}`,
-								8000,
-							),
-					);
-			}),
-		);
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item.setTitle('Save image…').onClick(() => {
-				new SavePreviewImageModal(
-					plugin.app,
-					image,
-					source.suggestedImagePath?.('png') ?? 'drawio-diagram.png',
-				).open();
-			}),
-		);
-		return menu;
-	};
+	const createActionsMenu = () =>
+		createDiagramMenu({
+			app: plugin.app,
+			imageProvider: () => Promise.resolve(image),
+			openEditor,
+			openViewer,
+			source,
+			xmlProvider,
+		});
 
 	const onContextMenu = (event: MouseEvent): void => {
 		if (!imageWrap.hasClass('has-preview') || !image.src) return;

@@ -65,3 +65,23 @@ export function replaceDrawioBlockBody(
 	lines.splice(range.start + 1, Math.max(0, range.end - range.start - 1), ...replacement);
 	return lines.join(newline);
 }
+
+export function removeDrawioBlock(documentText: string, range: DrawioBlockRange): string {
+	const newline = documentText.includes('\r\n') ? '\r\n' : '\n';
+	const lines = documentText.split(/\r?\n/);
+	if (getDrawioBlockBody(lines, range) === null) {
+		throw new Error('The draw.io code block could not be removed.');
+	}
+
+	let start = range.start;
+	let end = range.end;
+	const previousLineIsBlank = start > 0 && (lines[start - 1] ?? '').trim() === '';
+	const nextLineIsBlank = end + 1 < lines.length && (lines[end + 1] ?? '').trim() === '';
+
+	if (previousLineIsBlank && nextLineIsBlank) end += 1;
+	else if (start === 0 && nextLineIsBlank) end += 1;
+	else if (end === lines.length - 1 && previousLineIsBlank) start -= 1;
+
+	lines.splice(start, end - start + 1);
+	return lines.join(newline);
+}

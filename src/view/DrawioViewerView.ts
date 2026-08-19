@@ -1,14 +1,32 @@
-import { ItemView, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, type App, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
+import type { DrawioSource } from '../source/DrawioSource';
+import { createDiagramMenu } from './diagramMenu';
 import { DRAWIO_VIEWER_TITLE, DrawioViewer } from './DrawioViewer';
 
 export const DRAWIO_VIEWER_VIEW_TYPE = 'drawio-blocks-viewer';
 
 export interface DrawioViewerSession {
 	imageUri: string;
+	onSaved?: (xml: string) => void;
+	source: DrawioSource;
 	title: string;
 }
 
 export interface DrawioViewerViewHost {
+	app: App;
+	openEditor(source: DrawioSource, onSaved?: (xml: string) => void): void;
+	openEditorInLeaf(
+		leaf: WorkspaceLeaf,
+		source: DrawioSource,
+		onSaved?: (xml: string) => void,
+	): Promise<void>;
+	openEditorInTab(source: DrawioSource, onSaved?: (xml: string) => void): Promise<void>;
+	openViewer(source: DrawioSource, imageUri: string, onSaved?: (xml: string) => void): void;
+	openViewerInTab(
+		source: DrawioSource,
+		imageUri: string,
+		onSaved?: (xml: string) => void,
+	): Promise<void>;
 	releaseViewerSession(sessionId: string): void;
 	resolveViewerSession(sessionId: string): DrawioViewerSession | null;
 }
@@ -79,13 +97,41 @@ export class DrawioViewerView extends ItemView {
 			return;
 		}
 
-		this.viewer = new DrawioViewer(
-			this.contentEl,
-			this.session.title,
-			this.session.imageUri,
-			() => this.leaf.detach(),
-		);
+		const session = this.session;
+		this.viewer = new DrawioViewer(this.contentEl, session.title, session.imageUri, {
+			onClose: () => this.leaf.detach(),
+			onContextMenu: (event, image) => this.showContextMenu(event, image),
+			onEdit: () => {
+				void this.host
+					.openEditorInLeaf(this.leaf, session.source, session.onSaved)
+					.catch((error: unknown) => {
+						const message = error instanceof Error ? error.message : String(error);
+						new Notice(`draw.io Blocks: Could not open editor: ${message}`, 8000);
+					});
+			},
+			xmlProvider: () => session.source.read(),
+		});
 		this.viewer.mount();
+	}
+
+	private showContextMenu(event: MouseEvent, image: HTMLImageElement): void {
+		if (!this.session) return;
+		const { imageUri, onSaved, source } = this.session;
+		createDiagramMenu({
+			app: this.host.app,
+			imageProvider: () => Promise.resolve(image),
+			onDeleted: () => this.leaf.detach(),
+			openEditor: (inTab) => {
+				if (inTab) void this.host.openEditorInTab(source, onSaved);
+				else this.host.openEditor(source, onSaved);
+			},
+			openViewer: (inTab) => {
+				if (inTab) void this.host.openViewerInTab(source, imageUri, onSaved);
+				else this.host.openViewer(source, imageUri, onSaved);
+			},
+			source,
+			xmlProvider: () => source.read(),
+		}).showAtMouseEvent(event);
 	}
 
 	protected async onClose(): Promise<void> {

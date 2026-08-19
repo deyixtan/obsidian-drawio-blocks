@@ -50,11 +50,6 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 							setting.addToggle((toggle) =>
 								toggle
 									.setValue(this.plugin.useLocalEditor)
-									.setTooltip(
-										this.plugin.useLocalEditor
-											? 'Disable offline mode and remove the local editor'
-											: 'Download and enable the local editor',
-									)
 									.onChange((value) => this.setOfflineMode(value)),
 							);
 						},
@@ -242,7 +237,7 @@ export class DrawioBlocksSettingTab extends PluginSettingTab {
 					}[this.plugin.localEditorInstallPhase ?? 'downloading'];
 		const status = container.createDiv({
 			cls: 'drawio-blocks-offline-progress',
-			attr: { role: 'status', 'aria-live': 'polite', 'aria-label': label },
+			attr: { role: 'status', 'aria-live': 'polite' },
 		});
 		status.createSpan({ cls: 'drawio-blocks-offline-spinner' });
 		status.createSpan({ text: label });

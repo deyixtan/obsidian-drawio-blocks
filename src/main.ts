@@ -4,6 +4,8 @@ import {
 	Notice,
 	normalizePath,
 	Plugin,
+	TFile,
+	type WorkspaceLeaf,
 } from 'obsidian';
 import { DEFAULT_EDITOR_SETTINGS_VERSION, DEFAULT_PREVIEW_BORDER_COLOR } from './constants';
 import {
@@ -21,12 +23,14 @@ import { PreviewService } from './preview/PreviewService';
 import { DrawioBlocksSettingTab } from './settings/DrawioBlocksSettingTab';
 import { CodeBlockSource } from './source/CodeBlockSource';
 import type { DrawioSource } from './source/DrawioSource';
+import { DRAWIO_FILE_VIEW_TYPE, DrawioFileView } from './view/DrawioFileView';
 import { DrawioViewerModal } from './view/DrawioViewerModal';
 import {
 	DRAWIO_VIEWER_VIEW_TYPE,
 	DrawioViewerView,
 	type DrawioViewerSession,
 } from './view/DrawioViewerView';
+import { addDrawioFileMenu } from './view/drawioFileMenu';
 import { mountPreview, type PreviewHandle } from './view/renderPreview';
 
 interface DrawioBlocksPluginData {
@@ -113,6 +117,8 @@ export default class DrawioBlocksPlugin extends Plugin {
 
 		this.registerView(DRAWIO_EDITOR_VIEW_TYPE, (leaf) => new DrawioEditorView(leaf, this));
 		this.registerView(DRAWIO_VIEWER_VIEW_TYPE, (leaf) => new DrawioViewerView(leaf, this));
+		this.registerView(DRAWIO_FILE_VIEW_TYPE, (leaf) => new DrawioFileView(leaf, this));
+		this.registerExtensions(['drawio'], DRAWIO_FILE_VIEW_TYPE);
 		this.settingsTab = new DrawioBlocksSettingTab(this);
 		this.addSettingTab(this.settingsTab);
 
@@ -121,6 +127,13 @@ export default class DrawioBlocksPlugin extends Plugin {
 		});
 
 		this.registerEvent(this.app.workspace.on('css-change', () => this.refreshAllPreviews()));
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				if (file instanceof TFile && file.extension.toLowerCase() === 'drawio') {
+					addDrawioFileMenu(this, menu, file);
+				}
+			}),
+		);
 	}
 
 	onunload(): void {
@@ -136,14 +149,18 @@ export default class DrawioBlocksPlugin extends Plugin {
 		this.settingsTab = null;
 	}
 
-	openViewer(title: string, imageUri: string): void {
-		new DrawioViewerModal(this.app, title, imageUri).open();
+	openViewer(source: DrawioSource, imageUri: string, onSaved?: (xml: string) => void): void {
+		new DrawioViewerModal(this.app, this, source, imageUri, onSaved).open();
 	}
 
-	async openViewerInTab(title: string, imageUri: string): Promise<void> {
+	async openViewerInTab(
+		source: DrawioSource,
+		imageUri: string,
+		onSaved?: (xml: string) => void,
+	): Promise<void> {
 		const sessionId = `${Date.now()}-${++this.viewerSessionCounter}`;
 		const leaf = this.app.workspace.getLeaf('tab');
-		this.viewerSessions.set(sessionId, { title, imageUri });
+		this.viewerSessions.set(sessionId, { title: source.title(), imageUri, source, onSaved });
 
 		try {
 			await leaf.setViewState({
@@ -181,8 +198,22 @@ export default class DrawioBlocksPlugin extends Plugin {
 	}
 
 	async openEditorInTab(source: DrawioSource, onSaved?: (xml: string) => void): Promise<void> {
-		const sessionId = `${Date.now()}-${++this.editorSessionCounter}`;
 		const leaf = this.app.workspace.getLeaf('tab');
+		try {
+			await this.openEditorInLeaf(leaf, source, onSaved);
+		} catch (error) {
+			leaf.detach();
+			const message = error instanceof Error ? error.message : String(error);
+			new Notice(`draw.io Blocks: Could not open editor tab: ${message}`, 8000);
+		}
+	}
+
+	async openEditorInLeaf(
+		leaf: WorkspaceLeaf,
+		source: DrawioSource,
+		onSaved?: (xml: string) => void,
+	): Promise<void> {
+		const sessionId = `${Date.now()}-${++this.editorSessionCounter}`;
 		this.editorSessions.set(sessionId, { source, onSaved });
 
 		try {
@@ -194,9 +225,7 @@ export default class DrawioBlocksPlugin extends Plugin {
 			await this.app.workspace.revealLeaf(leaf);
 		} catch (error) {
 			this.editorSessions.delete(sessionId);
-			leaf.detach();
-			const message = error instanceof Error ? error.message : String(error);
-			new Notice(`draw.io Blocks: Could not open editor tab: ${message}`, 8000);
+			throw error;
 		}
 	}
 
@@ -215,6 +244,10 @@ export default class DrawioBlocksPlugin extends Plugin {
 			runtime: this.editorRuntime,
 			settingsVersion: this.editorSettingsVersion,
 		};
+	}
+
+	renderDiagram(xml: string): Promise<string> {
+		return this.previewService.render(xml, { dark: this.isDark() });
 	}
 
 	isDark(): boolean {

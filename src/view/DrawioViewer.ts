@@ -12,8 +12,16 @@ interface PointerPosition {
 	y: number;
 }
 
+export interface DrawioViewerOptions {
+	onClose?: () => void;
+	onContextMenu?: (event: MouseEvent, image: HTMLImageElement) => void;
+	onEdit?: () => void;
+	xmlProvider?: () => Promise<string>;
+}
+
 export class DrawioViewer {
 	private closeButton: HTMLButtonElement | null = null;
+	private editButton: HTMLButtonElement | null = null;
 	private fitButton: HTMLButtonElement | null = null;
 	private gestureStartDistance = 0;
 	private gestureStartImageX = 0;
@@ -26,6 +34,8 @@ export class DrawioViewer {
 	private hasUserTransform = false;
 	private image: HTMLImageElement | null = null;
 	private minimumScale = MIN_SCALE;
+	private mode: 'canvas' | 'xml' = 'canvas';
+	private modeButton: HTMLButtonElement | null = null;
 	private offsetX = 0;
 	private offsetY = 0;
 	private readonly pointers = new Map<number, PointerPosition>();
@@ -40,12 +50,17 @@ export class DrawioViewer {
 	private zoomLabelText = '';
 	private zoomOutButton: HTMLButtonElement | null = null;
 	private viewerWindow: Window | null = null;
+	private xmlCode: HTMLElement | null = null;
+	private xmlLoaded = false;
+	private xmlPane: HTMLElement | null = null;
+	private xmlRequestGeneration = 0;
+	private xmlStatus: HTMLElement | null = null;
 
 	constructor(
 		private readonly container: HTMLElement,
 		private readonly title: string,
 		private readonly imageUri: string,
-		private readonly requestClose?: () => void,
+		private readonly options: DrawioViewerOptions = {},
 	) {}
 
 	mount(): void {
@@ -56,9 +71,20 @@ export class DrawioViewer {
 		toolbar.createDiv({ cls: 'drawio-blocks-viewer-title', text: DRAWIO_VIEWER_TITLE });
 		const controls = toolbar.createDiv({ cls: 'drawio-blocks-viewer-controls' });
 
+		if (this.options.xmlProvider) {
+			this.modeButton = controls.createEl('button', {
+				cls: 'drawio-blocks-viewer-mode',
+				text: 'XML',
+				attr: { type: 'button' },
+			});
+		}
 		this.zoomOutButton = controls.createEl('button', {
-			text: '−',
-			attr: { type: 'button', 'aria-label': 'Zoom out' },
+			attr: { type: 'button' },
+		});
+		this.zoomOutButton.createSpan({ text: '−', attr: { 'aria-hidden': 'true' } });
+		this.zoomOutButton.createSpan({
+			cls: 'drawio-blocks-visually-hidden',
+			text: 'Zoom out',
 		});
 		this.zoomLabel = controls.createSpan({
 			cls: 'drawio-blocks-viewer-zoom',
@@ -66,28 +92,38 @@ export class DrawioViewer {
 			attr: { 'aria-live': 'polite' },
 		});
 		this.zoomInButton = controls.createEl('button', {
-			text: '+',
-			attr: { type: 'button', 'aria-label': 'Zoom in' },
+			attr: { type: 'button' },
+		});
+		this.zoomInButton.createSpan({ text: '+', attr: { 'aria-hidden': 'true' } });
+		this.zoomInButton.createSpan({
+			cls: 'drawio-blocks-visually-hidden',
+			text: 'Zoom in',
 		});
 		this.fitButton = controls.createEl('button', {
 			text: 'Fit',
-			attr: { type: 'button', 'aria-label': 'Fit diagram to viewer' },
+			attr: { type: 'button' },
 		});
-		if (this.requestClose) {
+		if (this.options.onEdit) {
+			this.editButton = controls.createEl('button', {
+				text: 'Edit',
+				attr: { type: 'button' },
+			});
+		}
+		if (this.options.onClose) {
 			this.closeButton = controls.createEl('button', {
 				cls: 'drawio-blocks-viewer-close',
-				attr: { type: 'button', 'aria-label': 'Close viewer' },
+				attr: { type: 'button' },
 			});
 			setIcon(this.closeButton, 'x');
+			this.closeButton.createSpan({
+				cls: 'drawio-blocks-visually-hidden',
+				text: 'Close viewer',
+			});
 		}
 
 		this.viewport = this.shell.createDiv({
 			cls: 'drawio-blocks-viewer-viewport',
-			attr: {
-				role: 'group',
-				tabindex: '0',
-				'aria-label': 'Diagram viewer. Drag to pan, pinch or use the controls to zoom.',
-			},
+			attr: { tabindex: '0' },
 		});
 		this.status = this.viewport.createDiv({
 			cls: 'drawio-blocks-viewer-status',
@@ -99,6 +135,15 @@ export class DrawioViewer {
 			attr: { alt: this.title },
 		});
 		this.image.draggable = false;
+		this.xmlPane = this.shell.createDiv({
+			cls: 'drawio-blocks-viewer-xml-pane',
+			attr: { hidden: '' },
+		});
+		this.xmlStatus = this.xmlPane.createDiv({
+			cls: 'drawio-blocks-viewer-xml-status',
+			text: 'Loading XML…',
+		});
+		this.xmlCode = this.xmlPane.createEl('pre').createEl('code');
 
 		this.image.addEventListener('load', this.onImageLoad);
 		this.image.addEventListener('error', this.onImageError);
@@ -111,9 +156,12 @@ export class DrawioViewer {
 		this.viewport.addEventListener('touchmove', this.onTouchEvent, { passive: false });
 		this.viewport.addEventListener('touchend', this.onTouchEvent, { passive: false });
 		this.viewport.addEventListener('touchcancel', this.onTouchEvent, { passive: false });
+		this.viewport.addEventListener('contextmenu', this.onContextMenu);
+		this.modeButton?.addEventListener('click', this.onModeToggle);
 		this.zoomOutButton.addEventListener('click', this.onZoomOut);
 		this.zoomInButton.addEventListener('click', this.onZoomIn);
 		this.fitButton.addEventListener('click', this.onFit);
+		this.editButton?.addEventListener('click', this.onEdit);
 		this.closeButton?.addEventListener('click', this.onClose);
 
 		this.viewerWindow = this.container.ownerDocument.defaultView;
@@ -139,16 +187,23 @@ export class DrawioViewer {
 		this.viewport?.removeEventListener('touchmove', this.onTouchEvent);
 		this.viewport?.removeEventListener('touchend', this.onTouchEvent);
 		this.viewport?.removeEventListener('touchcancel', this.onTouchEvent);
+		this.viewport?.removeEventListener('contextmenu', this.onContextMenu);
+		this.modeButton?.removeEventListener('click', this.onModeToggle);
 		this.zoomOutButton?.removeEventListener('click', this.onZoomOut);
 		this.zoomInButton?.removeEventListener('click', this.onZoomIn);
 		this.fitButton?.removeEventListener('click', this.onFit);
+		this.editButton?.removeEventListener('click', this.onEdit);
 		this.closeButton?.removeEventListener('click', this.onClose);
 		this.image?.removeAttribute('src');
+		this.xmlRequestGeneration += 1;
 		this.shell?.remove();
 
 		this.closeButton = null;
+		this.editButton = null;
 		this.fitButton = null;
 		this.image = null;
+		this.mode = 'canvas';
+		this.modeButton = null;
 		this.resizeObserver = null;
 		this.shell = null;
 		this.status = null;
@@ -160,6 +215,10 @@ export class DrawioViewer {
 		this.pointers.clear();
 		this.zoomLabelText = '';
 		this.viewerWindow = null;
+		this.xmlCode = null;
+		this.xmlLoaded = false;
+		this.xmlPane = null;
+		this.xmlStatus = null;
 	}
 
 	private readonly onImageLoad = (): void => {
@@ -185,7 +244,23 @@ export class DrawioViewer {
 	};
 
 	private readonly onClose = (): void => {
-		this.requestClose?.();
+		this.options.onClose?.();
+	};
+
+	private readonly onEdit = (): void => {
+		this.options.onEdit?.();
+	};
+
+	private readonly onModeToggle = (): void => {
+		if (this.mode === 'canvas') void this.showXml();
+		else this.showCanvas();
+	};
+
+	private readonly onContextMenu = (event: MouseEvent): void => {
+		if (!this.image || !this.options.onContextMenu) return;
+		event.preventDefault();
+		event.stopPropagation();
+		this.options.onContextMenu(event, this.image);
 	};
 
 	private readonly onZoomIn = (): void => {
@@ -246,6 +321,54 @@ export class DrawioViewer {
 		if (event.cancelable) event.preventDefault();
 		event.stopPropagation();
 	};
+
+	private async showXml(): Promise<void> {
+		if (!this.options.xmlProvider || !this.viewport || !this.xmlPane || !this.modeButton) {
+			return;
+		}
+
+		this.mode = 'xml';
+		this.viewport.hidden = true;
+		this.xmlPane.hidden = false;
+		this.modeButton.setText('Canvas');
+		this.setCanvasControlsDisabled(true);
+		if (this.xmlLoaded) return;
+
+		this.xmlStatus?.removeClass('is-error');
+		this.xmlStatus?.setText('Loading XML…');
+		const generation = ++this.xmlRequestGeneration;
+		try {
+			const xml = await this.options.xmlProvider();
+			if (generation !== this.xmlRequestGeneration || !this.xmlCode) return;
+			this.xmlCode.setText(xml);
+			this.xmlLoaded = true;
+			this.xmlStatus?.remove();
+			this.xmlStatus = null;
+		} catch (error) {
+			if (generation !== this.xmlRequestGeneration || !this.xmlStatus) return;
+			this.xmlStatus.addClass('is-error');
+			this.xmlStatus.setText(
+				error instanceof Error ? error.message : 'Could not load the diagram XML.',
+			);
+		}
+	}
+
+	private showCanvas(): void {
+		if (!this.viewport || !this.xmlPane || !this.modeButton) return;
+		this.mode = 'canvas';
+		this.viewport.hidden = false;
+		this.xmlPane.hidden = true;
+		this.modeButton.setText('XML');
+		this.setCanvasControlsDisabled(false);
+		if (!this.hasUserTransform) this.scheduleFit();
+	}
+
+	private setCanvasControlsDisabled(disabled: boolean): void {
+		this.zoomOutButton?.toggleAttribute('disabled', disabled);
+		this.zoomInButton?.toggleAttribute('disabled', disabled);
+		this.fitButton?.toggleAttribute('disabled', disabled);
+		this.zoomLabel?.toggleClass('is-disabled', disabled);
+	}
 
 	private restartGesture(): void {
 		if (!this.viewport) return;
